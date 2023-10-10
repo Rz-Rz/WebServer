@@ -1,8 +1,16 @@
 # Compiler
 CXX = c++
+GXX = g++
 
 # Compiler flags
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinc
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+
+# Criterion
+CRITERION = -I$$HOME/Criterion/include/criterion -Wl,-rpath=$$HOME/Criterion/build/src -L$$HOME/Criterion/build/src -W -lcriterion
+
+# Test sources and objects
+TEST_SOURCES = $(wildcard unitTest/*.cpp)
+TEST_OBJECTS = $(TEST_SOURCES:.cpp=.o)
 
 # Target binary name
 TARGET = webserver
@@ -15,6 +23,11 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 # Build target
 all: $(TARGET)
+
+# Test target
+test: 
+	$(GXX) $(CRITERION) $(CXXFLAGS)  -o test_$@ $^
+	./test_$@
 
 $(TARGET): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS)

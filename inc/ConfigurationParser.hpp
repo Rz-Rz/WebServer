@@ -7,31 +7,38 @@
 #include "RouteConfig.hpp"
 #include "ServerConfig.hpp"
 
+
 struct ParsedRouteConfig {
-	std::vector<std::string> methods;
+	std::set<std::string> methods; // changed from vector to set for efficient lookups
 	std::string redirect;
-	std::string root;
+	std::string root_directory_path; // more verbose
 	bool directory_listing;
 	std::string default_file;
-	std::string cgi_extension;
+	std::vector<std::string> cgi_extensions; // changed to vector to handle multiple extensions
 	bool allow_file_upload;
 	std::string upload_location;
+
+	ParsedRouteConfig()
+		: directory_listing(false), allow_file_upload(false) {}
 };
 
 struct ParsedServerConfig {
 	std::string host;
 	int port;
 	std::string server_name;
-	std::string default_error_page;
-	int max_client_body_size;
-	std::map<std::string, RouteConfig> routes;
+	std::map<int, std::string> error_pages; // Map to hold different error pages for different codes
+	size_t max_client_body_size; // changed to size_t for larger sizes
+	std::map<std::string, ParsedRouteConfig> routes; // fixed the typo `RouteConfig` to `ParsedRouteConfig`
+
+	ParsedServerConfig()
+		: port(0), max_client_body_size(0) {}
 };
 
 class ConfigurationParser {
 	private:
 		std::string filename;
 	public:
-		ConfigurationParser(std::string filename);
+		ConfigurationParser(const std::string& filename);
 		~ConfigurationParser();
 		std::map<std::string, ParsedServerConfig> parse();
 

@@ -20,7 +20,7 @@ std::string extractServerName(std::string line) {
 		throw ConfigurationParser::InvalidConfigurationException("Malformed server configuration line: " + line);
 	}
 
-	std::string serverName = line.substr(prefix.length(), line.length() - prefix.length() - suffix.length());
+	std::string serverName = line.substr(prefix.length(), line.length() - suffix.length());
 
 	if (serverName.empty()) {
 		throw ConfigurationParser::InvalidConfigurationException("Server name cannot be empty");
@@ -34,7 +34,7 @@ std::string extractServerName(std::string line) {
 	return serverName;
 }
 
-ConfigurationParser::ConfigurationParser(std::string filename) : filename(filename) {}
+ConfigurationParser::ConfigurationParser(const std::string& filename) : filename(filename) {}
 
 ConfigurationParser::~ConfigurationParser() {}
 

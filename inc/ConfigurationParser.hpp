@@ -1,12 +1,18 @@
 #ifndef CONFIGURATIONPARSER_HPP
 #define CONFIGURATIONPARSER_HPP
 
+#include <string>
+#include <map>
+#include <vector>
+#include "RouteConfig.hpp"
+#include "ServerConfig.hpp"
+
 struct ParsedRouteConfig {
 	std::vector<std::string> methods;
 	std::string redirect;
 	std::string root;
 	bool directory_listing;
-	std::stgring default_file;
+	std::string default_file;
 	std::string cgi_extension;
 	bool allow_file_upload;
 	std::string upload_location;
@@ -28,6 +34,14 @@ class ConfigurationParser {
 		ConfigurationParser(std::string filename);
 		~ConfigurationParser();
 		std::map<std::string, ParsedServerConfig> parse();
+
+		class InvalidConfigurationException : public std::exception {
+			public:
+				InvalidConfigurationException(const std::string& message);
+				virtual const char* what() const throw();
+			private:
+				std::string msg_;
+		};
 };
 
 #endif

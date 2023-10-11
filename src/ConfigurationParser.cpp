@@ -11,7 +11,8 @@ const char *ConfigurationParser::InvalidConfigurationException::what() const thr
 	return msg_.c_str();
 }
 
-std::string extractServerName(std::string line) {
+std::string extractServerName(std::string line) 
+{
 	const std::string prefix = "[server:";
 	const std::string suffix = "]";
 
@@ -48,9 +49,124 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 	while(std::getline(file, line)) {
 		if (line.empty() || line[0] == '#')
 			continue; // Skip empty lines and comments
+
 		if (line.find("[server:") != std::string::npos) {
-			// Extract server name and create a new ParsedServerConfig
-			std::string serverName = extractServerName(line);
+			currentServerConfig = new ParsedServerConfig;
+			try {
+				currentServerConfig->server_name = extractServerName(line);
+			} catch (ConfigurationParser::InvalidConfigurationException& e) {
+				delete currentServerConfig;
+				throw e;
+			}
+			currentRouteConfig = NULL; // Reset this, we're at a new server section now
+		}
+
+		if (line.find("host") != std::string::npos) {
+			if (currentServerConfig == NULL) {
+				throw ConfigurationParser::InvalidConfigurationException("Host specified outside of server block");
+			}
+			std::istringstream iss(line);
+			std::string host;
+			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+			getline(iss, host);  // Read the rest into value
+			if (host.empty()) {
+				throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
+			}
+			if (isValidIPv4(host) == false)
+				throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
+			currentServerConfig->host = host;
+		}
+		
+		if (line.find("port") != std::string::npos) {
+			if (currentServerConfig == NULL) 
+				throw ConfigurationParser::InvalidConfigurationException("Port specified outside of server block");
+
+			std::istringstream iss(line);
+			std::string portStr;
+			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+			getline(iss, portStr);
+			if (portStr.empty())
+				throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
+			int port = std::stoi(portStr);  // Convert string to integer
+			if (port < 1 || port > 65535)
+				throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
+			currentServerConfig->port = port;
+		}
+
+		if (line.find("default_error_page") != std::string::npos) {
+			std::istringstream iss(line);
+			std::string errorPagePath;
+			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+			getline(iss, errorPagePath);
+			if (errorPagePath.empty())
+				throw ConfigurationParser::InvalidConfigurationException("Default error page path cannot be empty");
+			if (pathExists(errorPagePath) == false)
+				throw ConfigurationParser::InvalidConfigurationException("Default error page path does not exist or does not have read permissions: " + errorPagePath);
+			currentServerConfig->default_error_page = errorPagePath;
+		}
+
+		// Save the parsed response.
+		if (currentServerConfig != NULL) {
+			parsedConfigs[currentServerConfig->server_name] = *currentServerConfig;
+			delete currentServerConfig; // clean up
 		}
 	}
+}
+
+bool isValidIPv4(const std::string& host) {
+    std::stringstream ss(host);
+    std::string item;
+    std::vector<std::string> tokens;
+
+    // Splitting at dots
+    while (std::getline(ss, item, '.')) {
+        tokens.push_back(item);
+    }
+
+    // Ensure we have exactly four parts.
+    if (tokens.size() != 4) {
+        return false;
+    }
+
+    for (size_t i = 0; i < tokens.size(); i++) {
+        item = tokens[i];
+        
+        // Ensure no part has leading zeros.
+        if (item.size() > 1 && item[0] == '0') {
+            return false;
+        }
+
+        // Each part should be a number between 0 and 255.
+        for (size_t j = 0; j < item.size(); j++) {
+            if (!isdigit(item[j])) {
+                return false; // Not a number
+            }
+        }
+
+        int val = std::atoi(item.c_str());
+        if (val < 0 || val > 255) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool pathExists(const std::string& path) {
+	return access(path.c_str(), F_OK | R_OK) == 0;
+}
+
+long long parseMaxBodySize(const std::string& input) {
+    char suffix = input.back();
+    long long multiplier = 1;  // default is bytes
+
+    if (suffix == 'k' || suffix == 'K') {
+        multiplier = 1024;  // KB
+    } else if (suffix == 'm' || suffix == 'M') {
+        multiplier = 1024 * 1024;  // MB
+    } else if (!std::isdigit(suffix)) {
+        throw ConfigurationParser::InvalidConfigurationException("Invalid max_client_body_size suffix: " + input);
+    }
+    long long value = std::stoll(input);  // might throw std::invalid_argument or std::out_of_range
+    return value * multiplier;
 }

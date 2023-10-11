@@ -27,7 +27,7 @@ struct ParsedServerConfig {
 	int port;
 	std::string server_name;
 	std::map<int, std::string> error_pages; // Map to hold different error pages for different codes
-	size_t max_client_body_size; // changed to size_t for larger sizes
+	long long max_client_body_size; // changed to size_t for larger sizes
 	std::map<std::string, ParsedRouteConfig> routes; // fixed the typo `RouteConfig` to `ParsedRouteConfig`
 
 	ParsedServerConfig()
@@ -50,5 +50,8 @@ class ConfigurationParser {
 				std::string msg_;
 		};
 };
+
+// parse the server name
+std::string extractServerName(std::string line);
 
 #endif

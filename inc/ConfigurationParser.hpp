@@ -7,7 +7,6 @@
 #include "RouteConfig.hpp"
 #include "ServerConfig.hpp"
 
-
 struct ParsedRouteConfig {
 	std::set<std::string> methods; // changed from vector to set for efficient lookups
 	std::string redirect;
@@ -53,5 +52,8 @@ class ConfigurationParser {
 
 // parse the server name
 std::string extractServerName(std::string line);
+bool isValidIPv4(const std::string& host);
+bool pathExists(const std::string& path);
+long long parseMaxBodySize(const std::string& input);
 
 #endif

@@ -4,6 +4,9 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <set>
+#include <limits>
+#include <unistd.h>
 
 ConfigurationParser::InvalidConfigurationException::InvalidConfigurationException(const std::string& message) : msg_(message) {}
 
@@ -17,21 +20,12 @@ std::string extractServerName(std::string line)
 	const std::string suffix = "]";
 
 	// Check if the line has the correct prefix and suffix
-	if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix) {
-		throw ConfigurationParser::InvalidConfigurationException("Malformed server configuration line: " + line);
-	}
-
+	if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
+		return "DefaultServerName";
 	std::string serverName = line.substr(prefix.length(), line.length() - suffix.length());
-
-	if (serverName.empty()) {
-		throw ConfigurationParser::InvalidConfigurationException("Server name cannot be empty");
-	}
-
 	// Validate the server name according to the rules
-    if (serverName.length() > 253 || serverName.find("..") != std::string::npos) {
-        throw ConfigurationParser::InvalidConfigurationException("Invalid server name: " + serverName);
-    }
-
+    if (serverName.length() > 253 || serverName.find("..") != std::string::npos)
+		return "DefaultServerName";
 	return serverName;
 }
 
@@ -43,22 +37,19 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 	std::map<std::string, ParsedServerConfig> parsedConfigs;
 	std::ifstream file(filename.c_str());
 	std::string line;
-	ParsedServerConfig* currentServerConfig = NULL;
-	ParsedRouteConfig* currentRouteConfig = NULL;
+	ParsedServerConfig currentServerConfig;
+	ParsedRouteConfig currentRouteConfig;
+	bool ParsingServer = false;
 
 	while(std::getline(file, line)) {
 		if (line.empty() || line[0] == '#')
 			continue; // Skip empty lines and comments
 
 		if (line.find("[server:") != std::string::npos) {
-			currentServerConfig = new ParsedServerConfig;
-			try {
-				currentServerConfig->server_name = extractServerName(line);
-			} catch (ConfigurationParser::InvalidConfigurationException& e) {
-				delete currentServerConfig;
-				throw e;
-			}
-			currentRouteConfig = NULL; // Reset this, we're at a new server section now
+			if (ParsingServer == true)
+				parsedConfigs[currentServerConfig->server_name] = currentServerConfig;
+			currentServerConfig->server_name = extractServerName(line);
+			ParsingServer = true;
 		}
 
 		if (line.find("host") != std::string::npos) {
@@ -105,11 +96,13 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			currentServerConfig->default_error_page = errorPagePath;
 		}
 
-		// Save the parsed response.
-		if (currentServerConfig != NULL) {
-			parsedConfigs[currentServerConfig->server_name] = *currentServerConfig;
-			delete currentServerConfig; // clean up
+		if (line.find("[route:") != std::string::npos) {
+			if (ParsingServer == true)
+				ParsingServer == false;
+			currentServerConfig->server_name = extractServerName(line);
+			ParsingServer = true;
 		}
+
 	}
 }
 

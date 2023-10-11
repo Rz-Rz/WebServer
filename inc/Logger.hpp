@@ -11,10 +11,14 @@ enum Level {
 
 class Logger {
 public:
-    Logger(const std::string& filename) : logFile(filename.c_str(), std::ios::app);
+    Logger();
+    ~Logger();
     void log(Level level, const std::string& message);
     
 private:
     std::string getLevelString(Level level);
     std::ofstream logFile;
+    std::string getCurrentTime();
+    std::string generateLogFilename();
+
 };

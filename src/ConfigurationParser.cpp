@@ -47,15 +47,12 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 
 		if (line.find("[server:") != std::string::npos) {
 			if (ParsingServer == true)
-				parsedConfigs[currentServerConfig->server_name] = currentServerConfig;
-			currentServerConfig->server_name = extractServerName(line);
+				parsedConfigs[currentServerConfig.server_name] = currentServerConfig;
+			currentServerConfig.server_name = extractServerName(line);
 			ParsingServer = true;
 		}
 
 		if (line.find("host") != std::string::npos) {
-			if (currentServerConfig == NULL) {
-				throw ConfigurationParser::InvalidConfigurationException("Host specified outside of server block");
-			}
 			std::istringstream iss(line);
 			std::string host;
 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
@@ -65,13 +62,10 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			}
 			if (isValidIPv4(host) == false)
 				throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
-			currentServerConfig->host = host;
+			currentServerConfig.host = host;
 		}
 		
 		if (line.find("port") != std::string::npos) {
-			if (currentServerConfig == NULL) 
-				throw ConfigurationParser::InvalidConfigurationException("Port specified outside of server block");
-
 			std::istringstream iss(line);
 			std::string portStr;
 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
@@ -81,7 +75,7 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			int port = std::stoi(portStr);  // Convert string to integer
 			if (port < 1 || port > 65535)
 				throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
-			currentServerConfig->port = port;
+			currentServerConfig.port = port;
 		}
 
 		if (line.find("default_error_page") != std::string::npos) {
@@ -93,7 +87,7 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 				throw ConfigurationParser::InvalidConfigurationException("Default error page path cannot be empty");
 			if (pathExists(errorPagePath) == false)
 				throw ConfigurationParser::InvalidConfigurationException("Default error page path does not exist or does not have read permissions: " + errorPagePath);
-			currentServerConfig->default_error_page = errorPagePath;
+			// currentServerConfig->default_error_page = errorPagePath;
 		}
 
 		if (line.find("[route:") != std::string::npos) {

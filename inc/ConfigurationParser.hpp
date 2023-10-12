@@ -25,9 +25,9 @@ struct ParsedServerConfig {
 	int port;
 	std::string server_name;
 	std::map<int, std::string> error_pages; // Map to hold different error pages for different codes
-  bool error_pages_set; // Flag to check if error pages are set
+	bool error_pages_set; // Flag to check if error pages are set
 	long long max_client_body_size; // changed to size_t for larger sizes
-  bool max_client_body_size_set; // Flag to check if max_client_body_size is set
+	bool max_client_body_size_set; // Flag to check if max_client_body_size is set
 	std::map<std::string, ParsedRouteConfig> routes; // fixed the typo `RouteConfig` to `ParsedRouteConfig`
 
 	ParsedServerConfig()

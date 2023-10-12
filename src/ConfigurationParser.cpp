@@ -40,6 +40,7 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 	ParsedServerConfig currentServerConfig;
 	ParsedRouteConfig currentRouteConfig;
 	bool ParsingServer = false;
+	bool ParsingRoute = false;
 
 	while(std::getline(file, line)) {
 		if (line.empty() || line[0] == '#')
@@ -84,20 +85,123 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
 			getline(iss, errorPagePath);
 			if (errorPagePath.empty())
-				throw ConfigurationParser::InvalidConfigurationException("Default error page path cannot be empty");
+				log("WARNING: default_error_page path is empty, reverting to default.");
 			if (pathExists(errorPagePath) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Default error page path does not exist or does not have read permissions: " + errorPagePath);
+				log("WARNING: default_error_page path does not exist or is not readable, reverting to default.");
 			// currentServerConfig->default_error_page = errorPagePath;
 		}
 
 		if (line.find("[route:") != std::string::npos) {
-			if (ParsingServer == true)
-				ParsingServer == false;
-			currentServerConfig->server_name = extractServerName(line);
-			ParsingServer = true;
+			if (ParsingRoute == true)
+				currentServerConfig.routes.push_back(currentRouteConfig);
+			ParsingRoute = true;
+			const std::string prefix = "[server:";
+			const std::string suffix = "]";
+
+			// Check if the line has the correct prefix and suffix
+			if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
+				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
+			std::string routeName = line.substr(prefix.length(), line.length() - suffix.length());
+			if isValidRoute(routeName) == false
+				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
+			currentRouteConfig.route_name = routeName;
 		}
 
+		if (line.find("methods") != std::string::npos) {
+			std::istringstream iss(line);
+			std::string method;
+			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+			getline(iss, method);
+			if (method.empty())
+			{
+				log("WARNING: method are empty, all method will be accepted.");
+				currentRouteConfig.methods.push_back("GET");
+				currentRouteConfig.methods.push_back("HEAD");
+			}
+			if (isValidMethod(errorPagePath) == false)
+				throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
+			currentRouteConfig.methods.push_back(method);
+		}
+		if (line.find("root") != std::string::npos)
+		{
+			std::istringstream iss(line);
+			std::string root;
+			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+			getline(iss, root);
+			if (root.empty())
+			{
+				log("WARNING: PARSING: root path is empty, reverting to default root.");
+				root = getCurrentExecutablePath();
+			}
+			if (pathExists(root) == false)
+				throw ConfigurationParser::InvalidConfigurationException("Root path does not exist or is not readable");
+			currentRouteConfig.root = root;
+		}
 	}
+}
+
+
+bool containsInvalidCharacter(const std::string& str) {
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        // Check if character is not alphanumeric and not in the list of safe characters
+        if (!isalnum(c) && std::string(":/?&=.#_-").find(c) == std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool isValidRedirect(const std::string& url) {
+    // Check starting pattern
+    if (url.find("/") == 0 || url.find("http://") == 0 || url.find("https://") == 0) {
+        if (containsInvalidCharacter(url)) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+std::string getCurrentExecutablePath() {
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    std::string path(result, (count > 0) ? count : 0);
+
+    // If you want just the directory, you can do:
+    size_t found = path.find_last_of("/\\");
+    return path.substr(0, found);
+}
+
+bool isValidMethod(const std::string& method) {
+	if (method.find(",") != std::string::npos)
+	{
+		size_t pos = method.find(",");
+		std::string first = method.substr(0, pos);
+		if (first != "GET" && first != "POST")
+			return false;
+		std::string second = method.substr(pos + 1);
+		if (second != "GET" && second != "POST")
+			return false;
+		return true;
+	}
+	else 
+		if (method != "GET" && method != "POST")
+			return false;
+	return true;
+}
+
+bool isValidRoute(const std::string& route) {
+	if (route.empty())
+		return false;
+	if (route[0] != '/')
+		return false;
+	for (std::string::const_iterator it = str.begin(); it != str.end(); ++it) {
+		unsigned char c = static_cast<unsigned char>(*it);
+		if (c <= 32 || c == 127) {
+			return true;  // Found a control character
+		}
+	return true;
 }
 
 bool isValidIPv4(const std::string& host) {

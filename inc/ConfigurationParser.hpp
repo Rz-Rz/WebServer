@@ -6,6 +6,11 @@
 #include <vector>
 #include <set>
 
+enum State {
+  START
+};
+
+
 struct ParsedRouteConfig {
 	std::set<std::string> methods; // changed from vector to set for efficient lookups
 	std::string redirect;

@@ -1,10 +1,16 @@
 #ifndef CONFIGURATIONPARSER_HPP
 #define CONFIGURATIONPARSER_HPP
 
-#include <string>
+#include <iostream>     // std::cout
+#include <sstream>      // std::istringstream
+#include <string>       // std::string
+#include <limits>
 #include <map>
-#include <vector>
 #include <set>
+#include <unistd.h>
+#include <climits>
+#include <string>
+#include <vector>
 
 enum State {
   START
@@ -12,9 +18,10 @@ enum State {
 
 
 struct ParsedRouteConfig {
+  std::string route_path;
 	std::set<std::string> methods; // changed from vector to set for efficient lookups
 	std::string redirect;
-	std::string root_directory_path; // more verbose
+	std::string root_directory_path; // the root from which to look for files
 	bool directory_listing;
 	std::string default_file;
 	std::vector<std::string> cgi_extensions; // changed to vector to handle multiple extensions
@@ -61,5 +68,8 @@ std::string extractServerName(std::string line);
 bool isValidIPv4(const std::string& host);
 bool pathExists(const std::string& path);
 long long parseMaxBodySize(const std::string& input);
+bool isValidMethod(const std::string& method);
+bool isValidRoute(const std::string& route);
+std::string getCurrentExecutablePath();
 
 #endif

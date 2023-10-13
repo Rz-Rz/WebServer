@@ -1,12 +1,13 @@
+#include "../inc/Logger.hpp"
 #include "../inc/ConfigurationParser.hpp"
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
+#include <iostream>     // std::cout
+#include <sstream>      // std::istringstream
+#include <string>       // std::string
+#include <limits>
 #include <map>
 #include <set>
-#include <limits>
 #include <unistd.h>
+#include <climits>
 
 ConfigurationParser::InvalidConfigurationException::InvalidConfigurationException(const std::string& message) : msg_(message) {}
 
@@ -85,15 +86,15 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
 			getline(iss, errorPagePath);
 			if (errorPagePath.empty())
-				log("WARNING: default_error_page path is empty, reverting to default.");
+				Logger::log(WARNING, "default_error_page path is empty, reverting to default.");
 			if (pathExists(errorPagePath) == false)
-				log("WARNING: default_error_page path does not exist or is not readable, reverting to default.");
+				Logger::log(WARNING, "default_error_page path does not exist or is not readable, reverting to default.");
 			// currentServerConfig->default_error_page = errorPagePath;
 		}
 
 		if (line.find("[route:") != std::string::npos) {
 			if (ParsingRoute == true)
-				currentServerConfig.routes.push_back(currentRouteConfig);
+        currentServerConfig.routes[currentRouteConfig.route_path] = currentRouteConfig;
 			ParsingRoute = true;
 			const std::string prefix = "[server:";
 			const std::string suffix = "]";
@@ -102,9 +103,9 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
 				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
 			std::string routeName = line.substr(prefix.length(), line.length() - suffix.length());
-			if isValidRoute(routeName) == false
+			if (isValidRoute(routeName) == false)
 				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
-			currentRouteConfig.route_name = routeName;
+			currentRouteConfig.route_path = routeName;
 		}
 
 		if (line.find("methods") != std::string::npos) {
@@ -114,13 +115,13 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			getline(iss, method);
 			if (method.empty())
 			{
-				log("WARNING: method are empty, all method will be accepted.");
-				currentRouteConfig.methods.push_back("GET");
-				currentRouteConfig.methods.push_back("HEAD");
+        Logger::log(WARNING, "method are empty, all method will be accepted.");
+				currentRouteConfig.methods.insert("GET");
+				currentRouteConfig.methods.insert("HEAD");
 			}
-			if (isValidMethod(errorPagePath) == false)
+			if (isValidMethod(method) == false)
 				throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
-			currentRouteConfig.methods.push_back(method);
+			currentRouteConfig.methods.insert(method);
 		}
 		if (line.find("root") != std::string::npos)
 		{
@@ -130,12 +131,12 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 			getline(iss, root);
 			if (root.empty())
 			{
-				log("WARNING: PARSING: root path is empty, reverting to default root.");
+        Logger::log(WARNING, "PARSING: root path is empty, reverting to default root.");
 				root = getCurrentExecutablePath();
 			}
 			if (pathExists(root) == false)
 				throw ConfigurationParser::InvalidConfigurationException("Root path does not exist or is not readable");
-			currentRouteConfig.root = root;
+			currentRouteConfig.root_directory_path = root;
 		}
 	}
 }
@@ -192,72 +193,67 @@ bool isValidMethod(const std::string& method) {
 }
 
 bool isValidRoute(const std::string& route) {
-	if (route.empty())
-		return false;
-	if (route[0] != '/')
-		return false;
-	for (std::string::const_iterator it = str.begin(); it != str.end(); ++it) {
-		unsigned char c = static_cast<unsigned char>(*it);
-		if (c <= 32 || c == 127) {
-			return true;  // Found a control character
-		}
-	return true;
+  if (route.empty())
+    return false;
+  if (route[0] != '/')
+    return false;
+  for (std::string::const_iterator it = route.begin(); it != route.end(); ++it) {
+    unsigned char c = static_cast<unsigned char>(*it);
+    if (c <= 32 || c == 127) {
+      return false;  // Found a control character
+    }
+  }
+  return true; 
 }
 
 bool isValidIPv4(const std::string& host) {
-    std::stringstream ss(host);
-    std::string item;
-    std::vector<std::string> tokens;
+  std::stringstream ss(host);
+  std::string item;
+  std::vector<std::string> tokens;
 
-    // Splitting at dots
-    while (std::getline(ss, item, '.')) {
-        tokens.push_back(item);
+  // Splitting at dots
+  while (std::getline(ss, item, '.')) {
+    tokens.push_back(item);
+  }
+  // Ensure we have exactly four parts.
+  if (tokens.size() != 4) {
+    return false;
+  }
+  for (size_t i = 0; i < tokens.size(); i++) {
+    item = tokens[i];
+    // Ensure no part has leading zeros.
+    if (item.size() > 1 && item[0] == '0') {
+      return false;
     }
-
-    // Ensure we have exactly four parts.
-    if (tokens.size() != 4) {
-        return false;
+    // Each part should be a number between 0 and 255.
+    for (size_t j = 0; j < item.size(); j++) {
+      if (!isdigit(item[j])) {
+        return false; // Not a number
+      }
     }
-
-    for (size_t i = 0; i < tokens.size(); i++) {
-        item = tokens[i];
-        
-        // Ensure no part has leading zeros.
-        if (item.size() > 1 && item[0] == '0') {
-            return false;
-        }
-
-        // Each part should be a number between 0 and 255.
-        for (size_t j = 0; j < item.size(); j++) {
-            if (!isdigit(item[j])) {
-                return false; // Not a number
-            }
-        }
-
-        int val = std::atoi(item.c_str());
-        if (val < 0 || val > 255) {
-            return false;
-        }
+    int val = std::atoi(item.c_str());
+    if (val < 0 || val > 255) {
+      return false;
     }
-
-    return true;
+  }
+  return true;
 }
 
 bool pathExists(const std::string& path) {
-	return access(path.c_str(), F_OK | R_OK) == 0;
+  return access(path.c_str(), F_OK | R_OK) == 0;
 }
 
 long long parseMaxBodySize(const std::string& input) {
-    char suffix = input.back();
-    long long multiplier = 1;  // default is bytes
+  char suffix = input.back();
+  long long multiplier = 1;  // default is bytes
 
-    if (suffix == 'k' || suffix == 'K') {
-        multiplier = 1024;  // KB
-    } else if (suffix == 'm' || suffix == 'M') {
-        multiplier = 1024 * 1024;  // MB
-    } else if (!std::isdigit(suffix)) {
-        throw ConfigurationParser::InvalidConfigurationException("Invalid max_client_body_size suffix: " + input);
-    }
-    long long value = std::stoll(input);  // might throw std::invalid_argument or std::out_of_range
-    return value * multiplier;
+  if (suffix == 'k' || suffix == 'K')
+    multiplier = 1024;  // KB
+  else if (suffix == 'm' || suffix == 'M')
+    multiplier = 1024 * 1024;  // MB
+  else if (!std::isdigit(suffix)) 
+    throw ConfigurationParser::InvalidConfigurationException("Invalid max_client_body_size suffix: " + input);
+
+  long long value = std::stoll(input);  // might throw std::invalid_argument or std::out_of_range
+  return value * multiplier;
 }

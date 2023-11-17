@@ -1,0 +1,40 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-I/home/afterburner/Criterion/include/criterion",
+      "-Wl,-rpath=/home/afterburner/Criterion/build/src",
+      "-W",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-I/home/afterburner/42/WebServer/inc",
+      "-o",
+      "crit_test",
+      "ConfigurationParsing.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer/unitTest",
+    "file": "/home/afterburner/42/WebServer/unitTest/ConfigurationParsing.cpp",
+    "output": "/home/afterburner/42/WebServer/unitTest/crit_test"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-I/home/afterburner/Criterion/include/criterion",
+      "-Wl,-rpath=/home/afterburner/Criterion/build/src",
+      "-W",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-I/home/afterburner/42/WebServer/inc",
+      "-o",
+      "crit_test",
+      "../src/ConfigurationParser.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer/unitTest",
+    "file": "/home/afterburner/42/WebServer/src/ConfigurationParser.cpp",
+    "output": "/home/afterburner/42/WebServer/unitTest/crit_test"
+  }
+]

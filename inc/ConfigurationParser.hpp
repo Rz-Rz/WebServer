@@ -58,6 +58,7 @@ class ConfigurationParser {
 			public:
 				InvalidConfigurationException(const std::string& message);
 				virtual const char* what() const throw();
+				virtual ~InvalidConfigurationException() throw() {}  // Explicitly declared destructor
 			private:
 				std::string msg_;
 		};

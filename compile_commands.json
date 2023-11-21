@@ -1,0 +1,87 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
+      "src/AcceptHandler.o",
+      "src/AcceptHandler.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/AcceptHandler.cpp",
+    "output": "/home/afterburner/42/WebServer/src/AcceptHandler.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
+      "src/ConfigurationParser.o",
+      "src/ConfigurationParser.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/ConfigurationParser.cpp",
+    "output": "/home/afterburner/42/WebServer/src/ConfigurationParser.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
+      "src/Logger.o",
+      "src/Logger.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/Logger.cpp",
+    "output": "/home/afterburner/42/WebServer/src/Logger.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
+      "src/Reactor.o",
+      "src/Reactor.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/Reactor.cpp",
+    "output": "/home/afterburner/42/WebServer/src/Reactor.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
+      "main.o",
+      "main.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/main.cpp",
+    "output": "/home/afterburner/42/WebServer/main.o"
+  }
+]

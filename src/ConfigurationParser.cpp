@@ -1,5 +1,6 @@
 #include "Logger.hpp"
 #include "ConfigurationParser.hpp"
+#include <cstdlib>
 #include <iostream>     // std::cout
 #include <sstream>      // std::istringstream
 #include <string>       // std::string
@@ -24,9 +25,11 @@ std::string extractServerName(std::string line)
 	// Check if the line has the correct prefix and suffix
 	if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
 		return "DefaultServerName";
-	std::string serverName = line.substr(prefix.length(), line.length() - suffix.length());
+	std::string serverName = line.substr(prefix.length(), line.length() - (prefix.length() + suffix.length()));
+	if (serverName.empty() == true)
+		return "DefaultServerName";
 	// Validate the server name according to the rules
-    if (serverName.length() > 253 || serverName.find("..") != std::string::npos)
+	if (serverName.length() > 253 || serverName.find("..") != std::string::npos)
 		return "DefaultServerName";
 	return serverName;
 }
@@ -232,7 +235,7 @@ bool isValidIPv4(const std::string& host) {
         return false; // Not a number
       }
     }
-    int val = std::atoi(item.c_str());
+    int val = atoi(item.c_str());
     if (val < 0 || val > 255) {
       return false;
     }
@@ -244,17 +247,17 @@ bool pathExists(const std::string& path) {
   return access(path.c_str(), F_OK | R_OK) == 0;
 }
 
-long long parseMaxBodySize(const std::string& input) {
-  char suffix = input.back();
-  long long multiplier = 1;  // default is bytes
-
-  if (suffix == 'k' || suffix == 'K')
-    multiplier = 1024;  // KB
-  else if (suffix == 'm' || suffix == 'M')
-    multiplier = 1024 * 1024;  // MB
-  else if (!std::isdigit(suffix)) 
-    throw ConfigurationParser::InvalidConfigurationException("Invalid max_client_body_size suffix: " + input);
-
-  long long value = std::stoll(input);  // might throw std::invalid_argument or std::out_of_range
-  return value * multiplier;
-}
+// long long parseMaxBodySize(const std::string& input) {
+//   char suffix = input.back();
+//   long long multiplier = 1;  // default is bytes
+//
+//   if (suffix == 'k' || suffix == 'K')
+//     multiplier = 1024;  // KB
+//   else if (suffix == 'm' || suffix == 'M')
+//     multiplier = 1024 * 1024;  // MB
+//   else if (!std::isdigit(suffix)) 
+//     throw ConfigurationParser::InvalidConfigurationException("Invalid max_client_body_size suffix: " + input);
+//
+//   long long value = std::stoll(input);  // might throw std::invalid_argument or std::out_of_range
+//   return value * multiplier;
+// }

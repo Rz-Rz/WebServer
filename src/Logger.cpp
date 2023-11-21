@@ -49,3 +49,5 @@ std::string Logger::getLevelString(Level level) {
 			return "UNKNOWN";
 	}
 }
+
+std::ofstream Logger::logFile;

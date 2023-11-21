@@ -1,6 +1,7 @@
 #include "Logger.hpp"
 #include "ConfigurationParser.hpp"
 #include <cstdlib>
+#include <algorithm>
 #include <iostream>     // std::cout
 #include <sstream>      // std::istringstream
 #include <string>       // std::string
@@ -51,7 +52,7 @@ ConfigurationParser::~ConfigurationParser() {}
 // 		if (line.empty() || line[0] == '#')
 // 			continue; // Skip empty lines and comments
 //
-// 		if (line.find("[server:") != std::string::npos) {
+// 		if (caseInsensitiveFind(line, "[server:")) {
 // 			if (ParsingServer == true)
 // 				parsedConfigs[currentServerConfig.server_name] = currentServerConfig;
 // 			currentServerConfig.server_name = extractServerName(line);
@@ -119,7 +120,7 @@ ConfigurationParser::~ConfigurationParser() {}
 // 			getline(iss, method);
 // 			if (method.empty())
 // 			{
-//         Logger::log(WARNING, "method are empty, all method will be accepted.");
+// 				Logger::log(WARNING, "method are empty, all method will be accepted.");
 // 				currentRouteConfig.methods.insert("GET");
 // 				currentRouteConfig.methods.insert("HEAD");
 // 			}
@@ -261,3 +262,14 @@ bool pathExists(const std::string& path) {
 //   long long value = std::stoll(input);  // might throw std::invalid_argument or std::out_of_range
 //   return value * multiplier;
 // }
+std::string toLower(const std::string& str) {
+    std::string lowerStr = str;
+    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
+    return lowerStr;
+}
+
+bool caseInsensitiveFind(const std::string& str, const std::string& toFind) {
+    std::string lowerStr = toLower(str);
+    std::string lowerToFind = toLower(toFind);
+    return lowerStr.find(lowerToFind) != std::string::npos;
+}

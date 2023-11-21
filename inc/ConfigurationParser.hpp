@@ -72,5 +72,9 @@ long long parseMaxBodySize(const std::string& input);
 bool isValidMethod(const std::string& method);
 bool isValidRoute(const std::string& route);
 std::string getCurrentExecutablePath();
+bool containsInvalidCharacter(const std::string& str);
+bool isValidRedirect(const std::string& url);
+bool caseInsensitiveFind(const std::string& str, const std::string& toFind);
+std::string toLower(const std::string& str);
 
 #endif

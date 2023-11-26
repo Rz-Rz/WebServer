@@ -2,9 +2,9 @@
 #include "ConfigurationParser.hpp"
 #include <cstdlib>
 #include <algorithm>
-#include <iostream>     // std::cout
-#include <sstream>      // std::istringstream
-#include <string>       // std::string
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <limits>
 #include <map>
 #include <set>
@@ -39,112 +39,113 @@ ConfigurationParser::ConfigurationParser(const std::string& filename) : filename
 
 ConfigurationParser::~ConfigurationParser() {}
 
-std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
-	std::map<std::string, ParsedServerConfig> parsedConfigs;
-	std::ifstream file(filename.c_str());
-	std::string line;
-	ParsedServerConfig currentServerConfig;
-	ParsedRouteConfig currentRouteConfig;
-	bool ParsingServer = false;
-	bool ParsingRoute = false;
-
-	while(std::getline(file, line)) {
-		if (line.empty() || line[0] == '#')
-			continue; // Skip empty lines and comments
-
-		if (caseInsensitiveFind(line, "[server:")) {
-			if (ParsingServer == true)
-				parsedConfigs[currentServerConfig.server_name] = currentServerConfig;
-			currentServerConfig.server_name = extractServerName(line);
-			ParsingServer = true;
-		}
-
-		if (caseInsensitiveFind(line, "host")) {
-			std::istringstream iss(line);
-			std::string host;
-			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-			getline(iss, host);  // Read the rest into value
-			if (host.empty()) {
-				throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
-			}
-			if (isValidIPv4(host) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
-			currentServerConfig.host = host;
-		}
-		
-		if (caseInsensitiveFind(line, "port")) {
-			std::istringstream iss(line);
-			std::string portStr;
-			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-			getline(iss, portStr);
-			if (portStr.empty())
-				throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
-			std::istringstream iss2(portStr);
-			int port;
-			iss2 >> port;
-			if (port < 1 || port > 65535)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
-			currentServerConfig.port = port;
-		}
-
-		if (caseInsensitiveFind(line, "error_page")) {
-			std::istringstream iss(line);
-			std::string errorPagePath;
-			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-			getline(iss, errorPagePath);
-			if (errorPagePath.empty())
-				Logger::log(WARNING, "error_page path is empty, reverting to default.");
-			if (pathExists(errorPagePath) == false)
-				Logger::log(WARNING, "error_page path does not exist or is not readable, reverting to default.");
-			// currentServerConfig->default_error_page = errorPagePath;
-		}
-		if (caseInsensitiveFind(line, "[route:")) {
-			if (ParsingRoute == true)
-				currentServerConfig.routes[currentRouteConfig.route_path] = currentRouteConfig;
-			ParsingRoute = true;
-			const std::string prefix = "[server:";
-			const std::string suffix = "]";
-
-			// Check if the line has the correct prefix and suffix
-			if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
-			std::string routeName = line.substr(prefix.length(), line.length() - suffix.length());
-			if (isValidRoute(routeName) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
-			currentRouteConfig.route_path = routeName;
-		}
-		if (caseInsensitiveFind(line, "methods")) {
-			std::istringstream iss(line);
-			std::string method;
-			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-			getline(iss, method);
-			if (method.empty())
-			{
-				Logger::log(WARNING, "method are empty, all method will be accepted.");
-				currentRouteConfig.methods.insert("GET");
-				currentRouteConfig.methods.insert("HEAD");
-			}
-			if (isValidMethod(method) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
-			currentRouteConfig.methods.insert(method);
-		}
-		if (caseInsensitiveFind(line, "root"))
-		{
-			std::istringstream iss(line);
-			std::string root;
-			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-			getline(iss, root);
-			if (root.empty())
-			{
-				Logger::log(WARNING, "PARSING: root path is empty, reverting to default root.");
-				root = getCurrentExecutablePath();
-			}
-			if (pathExists(root) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Root path does not exist or is not readable");
-			currentRouteConfig.root_directory_path = root;
-		}
-	}
-}
+// std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
+// 	std::map<std::string, ParsedServerConfig> parsedConfigs;
+// 	std::ifstream file(filename.c_str());
+// 	std::string line;
+// 	ParsedServerConfig currentServerConfig;
+// 	ParsedRouteConfig currentRouteConfig;
+// 	bool ParsingServer = false;
+// 	bool ParsingRoute = false;
+//
+// 	while(std::getline(file, line)) {
+// 		if (line.empty() || line[0] == '#')
+// 			continue; // Skip empty lines and comments
+//
+// 		if (caseInsensitiveFind(line, "[server:")) {
+// 			if (ParsingServer == true)
+// 				parsedConfigs[currentServerConfig.server_name] = currentServerConfig;
+// 			currentServerConfig.server_name = extractServerName(line);
+// 			ParsingServer = true;
+// 		}
+//
+// 		if (caseInsensitiveFind(line, "host")) {
+// 			std::istringstream iss(line);
+// 			std::string host;
+// 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+// 			getline(iss, host);  // Read the rest into value
+// 			if (host.empty()) {
+// 				throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
+// 			}
+// 			if (isValidIPv4(host) == false)
+// 				throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
+// 			currentServerConfig.host = host;
+// 		}
+// 		
+// 		if (caseInsensitiveFind(line, "port")) {
+// 			std::istringstream iss(line);
+// 			std::string portStr;
+// 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+// 			getline(iss, portStr);
+// 			if (portStr.empty())
+// 				throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
+// 			std::istringstream iss2(portStr);
+// 			int port;
+// 			iss2 >> port;
+// 			if (port < 1 || port > 65535)
+// 				throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
+// 			currentServerConfig.port = port;
+// 		}
+//
+// 		if (caseInsensitiveFind(line, "error_page")) {
+// 			std::istringstream iss(line);
+// 			std::string errorPagePath;
+// 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+// 			getline(iss, errorPagePath);
+// 			if (errorPagePath.empty())
+// 				Logger::log(WARNING, "error_page path is empty, reverting to default.");
+// 			if (pathExists(errorPagePath) == false)
+// 				Logger::log(WARNING, "error_page path does not exist or is not readable, reverting to default.");
+// 			// currentServerConfig->default_error_page = errorPagePath;
+// 		}
+//
+// 		if (caseInsensitiveFind(line, "[route:")) {
+// 			if (ParsingRoute == true)
+// 				currentServerConfig.routes[currentRouteConfig.route_path] = currentRouteConfig;
+// 			ParsingRoute = true;
+// 			const std::string prefix = "[server:";
+// 			const std::string suffix = "]";
+//
+// 			// Check if the line has the correct prefix and suffix
+// 			if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
+// 				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
+// 			std::string routeName = line.substr(prefix.length(), line.length() - suffix.length());
+// 			if (isValidRoute(routeName) == false)
+// 				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
+// 			currentRouteConfig.route_path = routeName;
+// 		}
+// 		if (caseInsensitiveFind(line, "methods")) {
+// 			std::istringstream iss(line);
+// 			std::string method;
+// 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+// 			getline(iss, method);
+// 			if (method.empty())
+// 			{
+// 				Logger::log(WARNING, "method are empty, all method will be accepted.");
+// 				currentRouteConfig.methods.insert("GET");
+// 				currentRouteConfig.methods.insert("HEAD");
+// 			}
+// 			if (isValidMethod(method) == false)
+// 				throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
+// 			currentRouteConfig.methods.insert(method);
+// 		}
+// 		if (caseInsensitiveFind(line, "root"))
+// 		{
+// 			std::istringstream iss(line);
+// 			std::string root;
+// 			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+// 			getline(iss, root);
+// 			if (root.empty())
+// 			{
+// 				Logger::log(WARNING, "PARSING: root path is empty, reverting to default root.");
+// 				root = getCurrentExecutablePath();
+// 			}
+// 			if (pathExists(root) == false)
+// 				throw ConfigurationParser::InvalidConfigurationException("Root path does not exist or is not readable");
+// 			currentRouteConfig.root_directory_path = root;
+// 		}
+// 	}
+// }
 
 
 bool containsInvalidCharacter(const std::string& str) {

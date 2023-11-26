@@ -8,7 +8,7 @@ CXXFLAGS = -Wall -Wextra -Werror -I$(HOME)/Criterion/include/criterion -I$(HOME)
 LDFLAGS = -Wl,-rpath=$(HOME)/Criterion/build/src -L$(HOME)/Criterion/build/src -lcriterion
 
 # Source files
-SOURCES = ConfigurationParsing.cpp ../src/ConfigurationParser.cpp
+SOURCES = ConfigurationParsing.cpp ../src/ConfigurationParser.cpp ../src/ParsingUtils.cpp
 
 # Target binary name
 TARGET = crit_test

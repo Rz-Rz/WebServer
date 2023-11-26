@@ -28,12 +28,13 @@ void ParsingUtils::trim(std::string &s) {
 }
 
 // Trim from both ends (copying)
-std::string ParsingUtils::trim_copy(std::string& s) {
-    trim(s);
-    return s;
+std::string ParsingUtils::trim_copy(const std::string& s) {
+	std::string str = s;
+	trim(str);
+	return str;
 }
 
-bool ParsingUtils::matcher(std::string& str, std::string& toFind) {
+bool ParsingUtils::matcher(const std::string& str, const std::string& toFind) {
 	std::string trimmedStr = trim_copy(str);
 	std::string trimmedToFind = trim_copy(toFind);
 

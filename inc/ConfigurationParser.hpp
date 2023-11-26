@@ -12,9 +12,12 @@
 #include <string>
 #include <vector>
 
-enum State {
-  START
+enum ParserState {
+    START,
+    SERVER_CONFIG,
+    ROUTE_CONFIG,
 };
+
 
 
 struct ParsedRouteConfig {
@@ -53,6 +56,16 @@ class ConfigurationParser {
 		ConfigurationParser(const std::string& filename);
 		~ConfigurationParser();
 		std::map<std::string, ParsedServerConfig> parse();
+
+		// Server Parsing
+		void parseHost(std::string& line, ParsedServerConfig& serverConfig);
+		void parsePort(std::string& line, ParsedServerConfig& serverConfig);
+		std::string parseServerName(std::string& line);
+		void parseErrorPages(std::string& line, ParsedServerConfig& serverConfig);
+		void parseMaxClientBodySize(std::string& line, ParsedServerConfig& serverConfig);
+
+		// Route Parsing
+
 
 		class InvalidConfigurationException : public std::exception {
 			public:

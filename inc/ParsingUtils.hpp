@@ -7,8 +7,8 @@
 class ParsingUtils {
 	public: 
 		static void trim(std::string& s);
-		static std::string trim_copy(std::string& s);
-		static bool matcher(std::string& str, std::string& toFind);
+		static std::string trim_copy(const std::string& s);
+		static bool matcher(const std::string& str, const std::string& toFind);
 		static std::string toLower(std::string& str);
 		static void ltrim(std::string& s);
 		static void rtrim(std::string& s);

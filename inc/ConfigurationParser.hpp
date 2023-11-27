@@ -36,8 +36,18 @@ class ConfigurationParser {
 		void parseClientMaxBodySize(std::string& line, Server& serverConfig);
 
 		// Route Parsing
+		void parseRoute(std::string& line, Server& serverConfig);
+		void parseMethods(std::string& line, Route& route);
+		void parseRedirect(std::string& line, Route& route);
+		void parseRoot(std::string& line, Route& route);
+		void parseDirectoryListing(std::string& line, Route& route);
+		void parseDefaultFile(std::string& line, Route& route);
+		void parseCgiExtensions(std::string& line, Route& route);
+		void parseAllowFileUpload(std::string& line, Route& route);
+		void parseUploadLocation(std::string& line, Route& route);
 
 
+		// Exception
 		class InvalidConfigurationException : public std::exception {
 			public:
 				InvalidConfigurationException(const std::string& message);

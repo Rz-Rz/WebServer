@@ -40,13 +40,13 @@ std::map<std::string, Server> ConfigurationParser::parse() {
 			case START:
 				if (ParsingUtils::matcher(line, "[server:")) {
 					if (ParsingServer == true)
-						parsedConfigs[currentServerConfig.server_name] = currentServerConfig;
-					currentServerConfig.server_name = ConfigurationParser::parseServerName(line);
+						parsedConfigs[currentServerConfig.getServerName()] = currentServerConfig;
+					ConfigurationParser::parseServerName(line, currentServerConfig);
 					ParsingServer = true;
 					state = SERVER_CONFIG;
 				} else if (ParsingUtils::matcher(line, "[route:")) {
 					if (ParsingRoute == true)
-						currentServerConfig.routes[currentRouteConfig.route_path] = currentRouteConfig; //save the previous route
+						currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
 					ParsingRoute = true;
 					const std::string prefix = "[route:";
 					const std::string suffix = "]";
@@ -294,6 +294,48 @@ void parseClientMaxBodySize(const std::string& line, Server& serverConfig) {
 	}
 }
 
+// Parse route Config
+void ConfigurationParser::parseRoute(std::string& line, Server& serverConfig) {
+    const std::string prefix = "[route:";
+    const std::string suffix = "]";
+
+    // Check if the line has the correct prefix and suffix
+    if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
+        throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
+
+    std::string routeName = line.substr(prefix.length(), line.length() - prefix.length() - suffix.length());
+
+    // Validate the route
+    if (routeName.empty() || routeName[0] != '/') {
+        throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
+    }
+    for (std::string::const_iterator it = routeName.begin(); it != routeName.end(); ++it) {
+        unsigned char c = static_cast<unsigned char>(*it);
+        if (c <= 32 || c == 127) {
+            throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName); // Found a control character
+        }
+    }
+
+    // Add route to server configuration
+    serverConfig.addRoute(routeName, Route());
+}
+
+void ConfigurationParser::parseMethods(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string method;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  // Ignore everything until the '='
+    while (iss >> method) {
+	if (method.empty()) {
+	    Logger::log(WARNING, "method are empty, all method will be accepted.");
+	    route.methods.insert("GET");
+	    route.methods.insert("HEAD");
+	}
+	if (isValidMethod(method) == false)
+	    throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
+	route.methods.insert(method);
+    }
+}
+
 
 
 
@@ -348,19 +390,6 @@ bool isValidMethod(const std::string& method) {
 	return true;
 }
 
-bool isValidRoute(const std::string& route) {
-  if (route.empty())
-    return false;
-  if (route[0] != '/')
-    return false;
-  for (std::string::const_iterator it = route.begin(); it != route.end(); ++it) {
-    unsigned char c = static_cast<unsigned char>(*it);
-    if (c <= 32 || c == 127) {
-      return false;  // Found a control character
-    }
-  }
-  return true; 
-}
 
 bool isValidIPv4(const std::string& host) {
   std::stringstream ss(host);

@@ -23,12 +23,12 @@ ConfigurationParser::ConfigurationParser(const std::string& filename) : filename
 
 ConfigurationParser::~ConfigurationParser() {}
 
-std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
-	std::map<std::string, ParsedServerConfig> parsedConfigs;
+std::map<std::string, Server> ConfigurationParser::parse() {
+	std::map<std::string, Server> parsedConfigs;
 	std::ifstream file(filename.c_str());
 	std::string line;
-	ParsedServerConfig currentServerConfig;
-	ParsedRouteConfig currentRouteConfig;
+	Server currentServerConfig;
+	Route currentRouteConfig;
 	bool ParsingServer = false;
 	bool ParsingRoute = false;
 	ParserState state = START;
@@ -77,6 +77,14 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 
 					if (ParsingUtils::matcher(line, "error_page"))
 						ConfigurationParser::parseErrorPages(line, currentServerConfig);
+
+					if (ParsingUtils::matcher(line, "client_max_body_size"))
+						ConfigurationParser::parseClientMaxBodySize(line, currentServerConfig);
+				}
+
+			case ROUTE_CONFIG:
+				if (ParsingUtils::matcher(line, "[server:]")) {
+
 				}
 
 }
@@ -135,7 +143,7 @@ std::map<std::string, ParsedServerConfig> ConfigurationParser::parse() {
 }
 
 // Parse server Config
-void ConfigurationParser::parseHost(std::string& line, ParsedServerConfig& serverConfig) {
+void ConfigurationParser::parseHost(std::string& line, Server& serverConfig) {
 	std::istringstream iss(line);
 	std::string host;
 	iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
@@ -145,10 +153,10 @@ void ConfigurationParser::parseHost(std::string& line, ParsedServerConfig& serve
 	}
 	if (isValidIPv4(host) == false)
 		throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
-	serverConfig.host = host;
+	serverConfig.setHost(host);
 }
 
-void ConfigurationParser::parsePort(std::string& line, ParsedServerConfig& serverConfig) {
+void ConfigurationParser::parsePort(std::string& line, Server& serverConfig) {
 	std::istringstream iss(line);
 	std::string portStr;
 	iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
@@ -160,28 +168,27 @@ void ConfigurationParser::parsePort(std::string& line, ParsedServerConfig& serve
 	iss2 >> port;
 	if (port < 1 || port > 65535)
 		throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
-	serverConfig.port = port;
+	serverConfig.setPort(port);
 }
 
-std::string ConfigurationParser::parseServerName(std::string &line) 
+void ConfigurationParser::parseServerName(std::string &line, Server& serverConfig) 
 {
 	const std::string prefix = "[server:";
 	const std::string suffix = "]";
 	
-
 	// Check if the line has the correct prefix and suffix
 	if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
-		return "DefaultServerName";
+		serverConfig.setServerName("DefaultServerName");;
 	std::string serverName = line.substr(prefix.length(), line.length() - (prefix.length() + suffix.length()));
 	if (serverName.empty() == true)
-		return "DefaultServerName";
+		serverConfig.setServerName("DefaultServerName");;
 	// Validate the server name according to the rules
 	if (serverName.length() > 253 || serverName.find("..") != std::string::npos)
-		return "DefaultServerName";
-	return serverName;
+		serverConfig.setServerName("DefaultServerName");;
+	serverConfig.setServerName(serverName);
 }
 
-void ConfigurationParser::parseErrorPages(std::string& line, ParsedServerConfig& serverConfig) {
+void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfig) {
 	std::size_t equalPos = line.find('=');
 	if (equalPos == std::string::npos || equalPos + 1 == line.size()) {
 		Logger::log(WARNING, "Invalid error_page format, reverting to default.");
@@ -239,10 +246,57 @@ void ConfigurationParser::parseErrorPages(std::string& line, ParsedServerConfig&
 			Logger::log(WARNING, "Invalid error_page code: " + codeStr);
 			continue;
 		}
-		serverConfig.error_pages[errorCode] = path;
+		serverConfig.setErrorPage(errorCode, path);
 	}
-	serverConfig.error_pages_set = true;
+	serverConfig.hasCustomErrorPage(true);
 }
+
+void parseClientMaxBodySize(const std::string& line, Server& serverConfig) {
+	std::istringstream iss(line);
+	std::string sizeStr;
+	iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+	getline(iss, sizeStr);
+
+	if (sizeStr.empty()) {
+		Logger::log(WARNING, "client_max_body_size is empty, reverting to default.");
+		serverConfig.setMaxClientBodySize(1000000);  // Default value
+		return;
+	}
+
+	long long size = 0;
+	long long multiplier = 1;  // Default is bytes
+	size_t i = 0;
+	bool invalidCharacterFound = false;
+
+	// Parse the number part
+	for (; i < sizeStr.size() && isdigit(sizeStr[i]); ++i) {
+		size = size * 10 + (sizeStr[i] - '0');
+	}
+
+	// Check for suffix and set the multiplier
+	if (i < sizeStr.size()) {
+		char suffix = sizeStr[i++];
+		if (suffix == 'k' || suffix == 'K') {
+			multiplier = 1024;  // KB
+		} else if (suffix == 'm' || suffix == 'M') {
+			multiplier = 1024 * 1024;  // MB
+		} else {
+			invalidCharacterFound = true;
+		}
+	}
+
+	// Check for extra characters or invalid characters
+	if (i != sizeStr.size() || invalidCharacterFound) {
+		Logger::log(WARNING, "Invalid client_max_body_size value, reverting to default.");
+		serverConfig.setMaxClientBodySize(1000000);  // Default value
+	} else {
+		serverConfig.setMaxClientBodySize(size * multiplier);
+	}
+}
+
+
+
+
 
 bool containsInvalidCharacter(const std::string& str) {
     for (size_t i = 0; i < str.size(); ++i) {
@@ -345,20 +399,6 @@ bool pathExists(const std::string& path) {
   return access(path.c_str(), F_OK | R_OK) == 0;
 }
 
-// long long parseMaxBodySize(const std::string& input) {
-//   char suffix = input.back();
-//   long long multiplier = 1;  // default is bytes
-//
-//   if (suffix == 'k' || suffix == 'K')
-//     multiplier = 1024;  // KB
-//   else if (suffix == 'm' || suffix == 'M')
-//     multiplier = 1024 * 1024;  // MB
-//   else if (!std::isdigit(suffix)) 
-//     throw ConfigurationParser::InvalidConfigurationException("Invalid max_client_body_size suffix: " + input);
-//
-//   long long value = std::stoll(input);  // might throw std::invalid_argument or std::out_of_range
-//   return value * multiplier;
-// }
 std::string toLower(const std::string& str) {
     std::string lowerStr = str;
     std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);

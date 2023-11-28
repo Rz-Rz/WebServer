@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cctype>
 #include <locale>
+#include <sys/stat.h>
 
 ParsingUtils::ParsingUtils() {}
 
@@ -56,4 +57,40 @@ std::string ParsingUtils::toLower(std::string& str) {
     std::string lowerStr = str;
     std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
     return lowerStr;
+}
+
+bool ParsingUtils::controlCharacters(const std::string &str)
+{
+	for (size_t i = 0; i < str.length(); i++) {
+		if (str[i] < 32 || str[i] > 126) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void ParsingUtils::setPrefixString(std::string &str, const std::string &prefix)
+{
+	str = prefix + str;
+}
+
+bool ParsingUtils::doesPathExist(const std::string& path) {
+	struct stat buffer;
+	return (stat(path.c_str(), &buffer) == 0);
+}
+
+bool ParsingUtils::hasReadPermissions(const std::string& path) {
+	struct stat buffer;
+	if (stat(path.c_str(), &buffer) == 0) {
+		return (buffer.st_mode & S_IRUSR);
+	}
+	return false;
+}
+
+bool ParsingUtils::hasWritePermissions(const std::string& path) {
+	struct stat buffer;
+	if (stat(path.c_str(), &buffer) == 0) {
+		return (buffer.st_mode & S_IWUSR);
+	}
+	return false;
 }

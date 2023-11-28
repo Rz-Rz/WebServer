@@ -6,14 +6,24 @@ void Route::setRoutePath(const std::string& path)
     this->routePath = path;
 }
 
-void Route::setMethods(const std::set<std::string>& methods)
+void Route::setGetMethod(const bool value)
 {
-    this->methods = methods;
+    this->getMethod = value;
 }
 
-void Route::setRedirect(const std::string& redirect)
+void Route::setPostMethod(const bool value)
+{
+    this->postMethod = value;
+}
+
+void Route::setRedirectLocation(const std::string& redirect)
 {
     this->redirect = redirect;
+}
+
+void Route::setHasRedirect(const bool value)
+{
+    this->has_redirect = value;
 }
 
 void Route::setRootDirectoryPath(const std::string& path)
@@ -29,6 +39,11 @@ void Route::setDirectoryListing(bool listing)
 void Route::setDefaultFile(const std::string& file)
 {
     this->defaultFile = file;
+}
+
+void Route::setHasCGI(bool value)
+{
+    this->has_CGI = value;
 }
 
 void Route::setCgiExtensions(const std::vector<std::string>& extensions)
@@ -52,12 +67,22 @@ std::string Route::getRoutePath() const
     return this->routePath;
 }
 
-std::set<std::string> Route::getMethods() const
+bool Route::getGetMethod(void) const
 {
-    return this->methods;
+    return this->getMethod;
 }
 
-std::string Route::getRedirect() const
+bool Route::getPostMethod(void) const
+{
+    return this->postMethod;
+}
+
+bool Route::getHasRedirect(void) const
+{
+    return this->has_redirect;
+}
+
+std::string Route::getRedirectLocation() const
 {
     return this->redirect;
 }
@@ -75,6 +100,11 @@ bool Route::getDirectoryListing() const
 std::string Route::getDefaultFile() const
 {
     return this->defaultFile;
+}
+
+bool Route::getHasCGI() const
+{
+    return this->has_CGI;
 }
 
 std::vector<std::string> Route::getCgiExtensions() const

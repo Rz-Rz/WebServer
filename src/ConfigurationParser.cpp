@@ -108,21 +108,11 @@ std::map<std::string, Server> ConfigurationParser::parse() {
 		if (ParsingUtils::matcher(line, "error_page")) {
 		}
 
-		if (ParsingUtils::matcher(line, "methods")) {
-			std::istringstream iss(line);
-			std::string method;
-			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-			getline(iss, method);
-			if (method.empty())
-			{
-				Logger::log(WARNING, "method are empty, all method will be accepted.");
-				currentRouteConfig.methods.insert("GET");
-				currentRouteConfig.methods.insert("HEAD");
-			}
-			if (isValidMethod(method) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
-			currentRouteConfig.methods.insert(method);
-		}
+if (ParsingUtils::matcher(line, "methods"))
+{
+
+}
+
 
 		if (ParsingUtils::matcher(line, "root"))
 		{
@@ -326,40 +316,203 @@ void ConfigurationParser::parseMethods(std::string& line, Route& route) {
     iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  // Ignore everything until the '='
     while (iss >> method) {
 	if (method.empty()) {
-	    Logger::log(WARNING, "method are empty, all method will be accepted.");
-	    route.methods.insert("GET");
-	    route.methods.insert("HEAD");
+	    Logger::log(WARNING, "method are empty, GET and POST will be accepted for route " + route.getRoutePath());
+	    route.setGetMethod(true);
+	    route.setPostMethod(true);
 	}
-	if (isValidMethod(method) == false)
-	    throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
-	route.methods.insert(method);
+	if (ParsingUtils::matcher(method, "GET"))
+	{
+		Logger::log(INFO, "GET method found for route " + route.getRoutePath());
+		route.setGetMethod(true);
+	}
+	else if (ParsingUtils::matcher(method, "POST"))
+	{
+		Logger::log(INFO, "POST method found for route " + route.getRoutePath());
+		route.setPostMethod(true);
+	}
+	else
+	{
+		Logger::log(WARNING, "Invalid method: " + method + ", GET and POST will be accepted for route " + route.getRoutePath());
+		route.setGetMethod(true);
+		route.setPostMethod(true);
+	}
     }
 }
 
-
-
-
-
-bool containsInvalidCharacter(const std::string& str) {
-    for (size_t i = 0; i < str.size(); ++i) {
-        char c = str[i];
-        // Check if character is not alphanumeric and not in the list of safe characters
-        if (!isalnum(c) && std::string(":/?&=.#_-").find(c) == std::string::npos) {
-            return true;
-        }
+void ConfigurationParser::parseRedirect(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string redirect;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  // Ignore everything until the '='
+    getline(iss, redirect);  // Read the rest into value
+    if (redirect.empty()) {
+	    Logger::log(WARNING, "redirect is empty, no redirect is registered for route " + route.getRoutePath());
+	    return;
     }
-    return false;
+    if (ParsingUtils::controlCharacters(redirect))
+    {
+	    Logger::log(WARNING, "Control characters found in redirect: " + redirect + ", no redirect is registered for route " + route.getRoutePath());
+	    return;
+    }
+    if (redirect[0] != '/') {
+	    Logger::log(WARNING, "redirect must start with a '/', prefixed " + redirect + " with a '/'"); 
+	    ParsingUtils::setPrefixString(redirect, "/");
+    }
+    route.setRedirectLocation(redirect);
 }
 
-bool isValidRedirect(const std::string& url) {
-    // Check starting pattern
-    if (url.find("/") == 0 || url.find("http://") == 0 || url.find("https://") == 0) {
-        if (containsInvalidCharacter(url)) {
-            return false;
-        }
-        return true;
+void ConfigurationParser::parseRoot(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string root;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+    getline(iss, root); 
+
+    if (root.empty()) {
+        Logger::log(WARNING, "root is empty, using default root: " + root);
+        root = "/var/www/webserver/"; // Default compiled-in path
     }
-    return false;
+    if (ParsingUtils::doesPathExist(root) == false) {
+	    Logger::log(WARNING, "root path does not exist: " + root + " reverting to default root.");
+	    root = "/var/www/webserver/"; // Default compiled-in path
+    } else if (ParsingUtils::hasReadPermissions(root) == false) {
+	    Logger::log(WARNING, "root path does not have read permissions: " + root + " reverting to default root.");
+	    root = "/var/www/webserver/"; // Default compiled-in path
+    }
+    else if (ParsingUtils::hasWritePermissions(root) == false) {
+	    Logger::log(WARNING, "root path does not have write permissions: " + root + " reverting to default root.");
+	    root = "/var/www/webserver/"; // Default compiled-in path
+    }
+    // Check for relative paths leading outside of server root
+    if (root.find("../") != std::string::npos) {
+        throw ConfigurationParser::InvalidConfigurationException("Relative paths outside server root are forbidden: " + root);
+    }
+    route.setRootDirectoryPath(root);
+}
+
+
+void ConfigurationParser::parseDirectoryListing(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string listing;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+    getline(iss, listing); 
+
+    if (listing.empty()) {
+	Logger::log(WARNING, "directory_listing is empty, reverting to default.");
+	route.setDirectoryListing(false);
+	return;
+    }
+    if (ParsingUtils::matcher(listing, "on")) {
+	Logger::log(INFO, "directory_listing is on for route " + route.getRoutePath());
+	route.setDirectoryListing(true);
+    } else if (ParsingUtils::matcher(listing, "off")) {
+	Logger::log(INFO, "directory_listing is off for route " + route.getRoutePath());
+	route.setDirectoryListing(false);
+    } else {
+	Logger::log(WARNING, "Invalid directory_listing value: " + listing + ", reverting to default (false).");
+	route.setDirectoryListing(false);
+    }
+}
+
+void ConfigurationParser::parseDefaultFile(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string file;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+    getline(iss, file); 
+
+    if (file.empty()) {
+	Logger::log(WARNING, "default_file is empty, reverting to default.");
+	route.setDefaultFile("index.html");
+	return;
+    }
+    if (ParsingUtils::controlCharacters(file)) {
+	Logger::log(WARNING, "Control characters found in default_file: " + file + ", reverting to default.");
+	route.setDefaultFile("index.html");
+	return;
+    }
+    if (file[0] != '/') {
+	Logger::log(WARNING, "default_file must start with a '/', prefixed " + file + " with a '/'"); 
+	ParsingUtils::setPrefixString(file, "/");
+    }
+    route.setDefaultFile(file);
+}
+
+void ConfigurationParser::parseCgiExtensions(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string extensions;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+    getline(iss, extensions); 
+
+    if (extensions.empty()) {
+	Logger::log(WARNING, "cgi_extensions is empty, reverting to default.");
+	route.setHasCGI(false);
+	return;
+    }
+    std::istringstream iss2(extensions);
+    std::string extension;
+    std::vector<std::string> extensionsList;
+    while (iss2 >> extension) {
+	if (extension.empty()) {
+	    Logger::log(WARNING, "Empty extension found in cgi_extensions, reverting to default (false).");
+	    route.setHasCGI(false);
+	    return;
+	}
+	if (ParsingUtils::controlCharacters(extension)) {
+	    Logger::log(WARNING, "Control characters found in cgi_extensions: " + extension + ", reverting to default (false).");
+	    route.setHasCGI(false);
+	    return;
+	}
+	if (extension[0] != '.') {
+	    Logger::log(WARNING, "Extension must start with a '.', prefixed " + extension + " with a '.'"); 
+	    ParsingUtils::setPrefixString(extension, ".");
+	}
+	extensionsList.push_back(extension);
+    }
+    route.setCgiExtensions(extensionsList);
+}
+
+void ConfigurationParser::parseAllowFileUpload(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string allow;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+    getline(iss, allow); 
+
+    if (allow.empty()) {
+	Logger::log(WARNING, "allow_file_upload is empty, reverting to default.");
+	route.setAllowFileUpload(false);
+	return;
+    }
+    if (ParsingUtils::matcher(allow, "on")) {
+	Logger::log(INFO, "allow_file_upload is on for route " + route.getRoutePath());
+	route.setAllowFileUpload(true);
+    } else if (ParsingUtils::matcher(allow, "off")) {
+	Logger::log(INFO, "allow_file_upload is off for route " + route.getRoutePath());
+	route.setAllowFileUpload(false);
+    } else {
+	Logger::log(WARNING, "Invalid allow_file_upload value: " + allow + ", reverting to default (false).");
+	route.setAllowFileUpload(false);
+    }
+}
+
+void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
+    std::istringstream iss(line);
+    std::string location;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+    getline(iss, location); 
+
+    if (location.empty()) {
+	Logger::log(WARNING, "upload_location is empty, reverting to default.");
+	route.setUploadLocation("/var/www/webserver/uploads/");
+	return;
+    }
+    if (ParsingUtils::controlCharacters(location)) {
+	Logger::log(WARNING, "Control characters found in upload_location: " + location + ", reverting to default.");
+	route.setUploadLocation("/var/www/webserver/uploads/");
+	return;
+    }
+    if (location[0] != '/') {
+	Logger::log(WARNING, "upload_location must start with a '/', prefixed " + location + " with a '/'"); 
+	ParsingUtils::setPrefixString(location, "/");
+    }
+    route.setUploadLocation(location);
 }
 
 std::string getCurrentExecutablePath() {
@@ -370,24 +523,6 @@ std::string getCurrentExecutablePath() {
     // If you want just the directory, you can do:
     size_t found = path.find_last_of("/\\");
     return path.substr(0, found);
-}
-
-bool isValidMethod(const std::string& method) {
-	if (method.find(",") != std::string::npos)
-	{
-		size_t pos = method.find(",");
-		std::string first = method.substr(0, pos);
-		if (first != "GET" && first != "POST")
-			return false;
-		std::string second = method.substr(pos + 1);
-		if (second != "GET" && second != "POST")
-			return false;
-		return true;
-	}
-	else 
-		if (method != "GET" && method != "POST")
-			return false;
-	return true;
 }
 
 
@@ -422,20 +557,4 @@ bool isValidIPv4(const std::string& host) {
     }
   }
   return true;
-}
-
-bool pathExists(const std::string& path) {
-  return access(path.c_str(), F_OK | R_OK) == 0;
-}
-
-std::string toLower(const std::string& str) {
-    std::string lowerStr = str;
-    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
-    return lowerStr;
-}
-
-bool caseInsensitiveFind(const std::string& str, const std::string& toFind) {
-    std::string lowerStr = toLower(str);
-    std::string lowerToFind = toLower(toFind);
-    return lowerStr.find(lowerToFind) != std::string::npos;
 }

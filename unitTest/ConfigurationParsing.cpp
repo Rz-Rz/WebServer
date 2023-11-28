@@ -19,6 +19,28 @@ Test(configuration_parser, parse_valid_route) {
     cr_assert_str_eq(route.getRoutePath().c_str(), "/kapouet", "Route path should be /kapouet");
 }
 
+Test(configuration_parser, parse_valid_route_different_path) {
+    Route route;
+    std::string line = "[route:/api/v1]";
+    ConfigurationParser::parseRoute(line, route);
+    cr_assert_str_eq(route.getRoutePath().c_str(), "/api/v1", "Route path should be /api/v1");
+}
+
+Test(configuration_parser, parse_route_trailing_slash) {
+    Route route;
+    std::string line = "[route:/trailing/]";
+    ConfigurationParser::parseRoute(line, route);
+    cr_assert_str_eq(route.getRoutePath().c_str(), "/trailing/", "Route path should be /trailing/");
+}
+
+Test(configuration_parser, parse_invalid_route_format, .expected = ConfigurationParser::InvalidConfigurationException) {
+    Route route;
+    std::string line = "route:/kapouet"; // Missing brackets
+    ConfigurationParser::parseRoute(line, route);
+}
+
+
+
 
 
 // ------------------------------------ ParsingUtils --------------------------------

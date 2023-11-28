@@ -3,6 +3,7 @@
 #include <cctype>
 #include <locale>
 #include <sys/stat.h>
+#include <arpa/inet.h>
 
 ParsingUtils::ParsingUtils() {}
 
@@ -93,4 +94,10 @@ bool ParsingUtils::hasWritePermissions(const std::string& path) {
 		return (buffer.st_mode & S_IWUSR);
 	}
 	return false;
+}
+
+bool ParsingUtils::isValidIPv4(const std::string& host) {
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, host.c_str(), &(sa.sin_addr));
+    return result == 1;
 }

@@ -16,6 +16,7 @@ class ParsingUtils {
 		static bool isNotSpace(char ch);
 		static bool controlCharacters(const std::string& str);
 		static void setPrefixString(std::string& str, const std::string& prefix);
+    static bool isValidIPv4(const std::string& host);
 
 		// Path Utils
 		static bool doesPathExist(const std::string& path);

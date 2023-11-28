@@ -1,5 +1,16 @@
 #include "Route.hpp"
 
+
+Route::Route()
+{
+    this->getMethod = false;
+    this->postMethod = false;
+    this->has_redirect = false;
+    this->directoryListing = false;
+    this->has_CGI = false;
+    this->allowFileUpload = false;
+}
+
 // Setters
 void Route::setRoutePath(const std::string& path)
 {

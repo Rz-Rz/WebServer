@@ -1,6 +1,8 @@
 #include "Logger.hpp"
 #include "ParsingUtils.hpp"
 #include "ConfigurationParser.hpp"
+#include "Server.hpp"
+#include "Route.hpp"
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
@@ -72,6 +74,7 @@ std::map<std::string, Server> ConfigurationParser::parse() {
           if (ParsingUtils::matcher(line, "client_max_body_size"))
             ConfigurationParser::parseClientMaxBodySize(line, currentServerConfig);
         }
+        break;
       case ROUTE_CONFIG:
         if (ParsingUtils::matcher(line, "[server:"))
         {
@@ -108,6 +111,7 @@ std::map<std::string, Server> ConfigurationParser::parse() {
         if (ParsingUtils::matcher(line, "upload_location"))
           ConfigurationParser::parseUploadLocation(line, currentRouteConfig);
     }
+        break;
   }
   return parsedConfigs;
 }
@@ -121,7 +125,7 @@ void ConfigurationParser::parseHost(std::string& line, Server& serverConfig) {
 	if (host.empty()) {
 		throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
 	}
-	if (isValidIPv4(host) == false)
+	if (ParsingUtils::isValidIPv4(host) == false)
 		throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
 	serverConfig.setHost(host);
 }
@@ -189,7 +193,7 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
 	std::string path = tokens.back(); // The last token is the path
 	tokens.pop_back(); // Remove the path from the list of tokens
 
-	if (!pathExists(path)) {
+	if (!ParsingUtils::doesPathExist(path)) {
 		Logger::log(WARNING, "error_page path does not exist or is not readable, reverting to default.");
 		return;
 	}
@@ -221,7 +225,7 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
 	serverConfig.hasCustomErrorPage(true);
 }
 
-void parseClientMaxBodySize(const std::string& line, Server& serverConfig) {
+void ConfigurationParser::parseClientMaxBodySize(std::string& line, Server& serverConfig) {
 	std::istringstream iss(line);
 	std::string sizeStr;
 	iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
@@ -265,7 +269,7 @@ void parseClientMaxBodySize(const std::string& line, Server& serverConfig) {
 }
 
 // Parse route Config
-void ConfigurationParser::parseRoute(std::string& line, Server& serverConfig) {
+void ConfigurationParser::parseRoute(std::string& line, Route& route) {
     const std::string prefix = "[route:";
     const std::string suffix = "]";
 
@@ -274,10 +278,9 @@ void ConfigurationParser::parseRoute(std::string& line, Server& serverConfig) {
         throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
 
     std::string routeName = line.substr(prefix.length(), line.length() - prefix.length() - suffix.length());
-
     // Validate the route
-    if (routeName.empty() || routeName[0] != '/') {
-        throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
+    if (routeName.empty()) {
+        throw ConfigurationParser::InvalidConfigurationException("Empty route: " + routeName);
     }
     for (std::string::const_iterator it = routeName.begin(); it != routeName.end(); ++it) {
         unsigned char c = static_cast<unsigned char>(*it);
@@ -285,9 +288,14 @@ void ConfigurationParser::parseRoute(std::string& line, Server& serverConfig) {
             throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName); // Found a control character
         }
     }
-
-    // Add route to server configuration
-    serverConfig.addRoute(routeName, Route());
+    if (routeName.find("..") != std::string::npos) {
+        throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName); // Found ".."
+    }
+    if (routeName[0] != '/') {
+      Logger::log(WARNING, "route name must start with a '/', prefixed " + routeName + " with a '/'");
+      ParsingUtils::setPrefixString(routeName, "/");
+    };
+    route.setRoutePath(routeName);
 }
 
 void ConfigurationParser::parseMethods(std::string& line, Route& route) {
@@ -503,38 +511,4 @@ std::string getCurrentExecutablePath() {
     // If you want just the directory, you can do:
     size_t found = path.find_last_of("/\\");
     return path.substr(0, found);
-}
-
-
-bool isValidIPv4(const std::string& host) {
-  std::stringstream ss(host);
-  std::string item;
-  std::vector<std::string> tokens;
-
-  // Splitting at dots
-  while (std::getline(ss, item, '.')) {
-    tokens.push_back(item);
-  }
-  // Ensure we have exactly four parts.
-  if (tokens.size() != 4) {
-    return false;
-  }
-  for (size_t i = 0; i < tokens.size(); i++) {
-    item = tokens[i];
-    // Ensure no part has leading zeros.
-    if (item.size() > 1 && item[0] == '0') {
-      return false;
-    }
-    // Each part should be a number between 0 and 255.
-    for (size_t j = 0; j < item.size(); j++) {
-      if (!isdigit(item[j])) {
-        return false; // Not a number
-      }
-    }
-    int val = atoi(item.c_str());
-    if (val < 0 || val > 255) {
-      return false;
-    }
-  }
-  return true;
 }

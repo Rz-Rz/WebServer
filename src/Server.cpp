@@ -1,5 +1,14 @@
 #include "Server.hpp"
 
+Server::Server()
+{
+      this->host = "";
+      this->port = 0;
+      this->serverName = "";
+      this->customErrorPage = false;
+      this->maxClientBodySize = 0;
+}
+
 // Setters
 void Server::setHost(const std::string& host)
 {
@@ -62,7 +71,7 @@ bool Server::hasCustomErrorPage(void) const
 	    return this->customErrorPage;
 }
 
-size_t Server::getMaxClientBodySize() const
+long long Server::getMaxClientBodySize() const
 {
 	    return this->maxClientBodySize;
 }

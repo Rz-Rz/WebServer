@@ -24,112 +24,92 @@ ConfigurationParser::ConfigurationParser(const std::string& filename) : filename
 ConfigurationParser::~ConfigurationParser() {}
 
 std::map<std::string, Server> ConfigurationParser::parse() {
-	std::map<std::string, Server> parsedConfigs;
-	std::ifstream file(filename.c_str());
-	std::string line;
-	Server currentServerConfig;
-	Route currentRouteConfig;
-	bool ParsingServer = false;
-	bool ParsingRoute = false;
-	ParserState state = START;
+  std::map<std::string, Server> parsedConfigs;
+  std::ifstream file(filename.c_str());
+  std::string line;
+  Server currentServerConfig;
+  Route currentRouteConfig;
+  bool ParsingServer = false;
+  bool ParsingRoute = false;
+  ParserState state = START;
 
-	while(std::getline(file, line)) {
-		if (line.empty() || line[0] == '#')
-			continue; // Skip empty lines and comments
-		switch (state) {
-			case START:
-				if (ParsingUtils::matcher(line, "[server:")) {
-					if (ParsingServer == true)
-						parsedConfigs[currentServerConfig.getServerName()] = currentServerConfig;
-					ConfigurationParser::parseServerName(line, currentServerConfig);
-					ParsingServer = true;
-					state = SERVER_CONFIG;
-				} else if (ParsingUtils::matcher(line, "[route:")) {
-					if (ParsingRoute == true)
-						currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
-					ParsingRoute = true;
-					const std::string prefix = "[route:";
-					const std::string suffix = "]";
+  while(std::getline(file, line)) {
+    if (line.empty() || line[0] == '#')
+      continue; // Skip empty lines and comments
+    switch (state) {
+      case START:
+        if (ParsingUtils::matcher(line, "[server:"))
+        {
+          state = SERVER_CONFIG;
+          if (ParsingServer == true) // save the previous server configuration before starting the new one.
+            parsedConfigs.insert(std::pair<std::string, Server>(currentServerConfig.getServerName(), currentServerConfig));
+          ParsingServer = true;
+        }
+        if (ParsingUtils::matcher(line, "[route:"))
+        {
+          state = ROUTE_CONFIG;
+          if (ParsingRoute == true) // save the previous route configuration before starting the new one.
+            currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
+          ParsingRoute = true;
+        }
+        break;
+      case SERVER_CONFIG:
+        if (ParsingUtils::matcher(line, "[route:"))
+          state = ROUTE_CONFIG;
+        else {
+          if (ParsingUtils::matcher(line, "[server:"))
+            ConfigurationParser::parseServerName(line, currentServerConfig);
 
-					// Check if the line has the correct prefix and suffix
-					if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
-						throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
-					std::string routeName = line.substr(prefix.length(), line.length() - suffix.length());
-					if (isValidRoute(routeName) == false)
-						throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
-					currentRouteConfig.route_path = routeName;
-					state = ROUTE_CONFIG;
-				}
-				break;
+          if (ParsingUtils::matcher(line, "host"))
+            ConfigurationParser::parseHost(line, currentServerConfig);
 
-			case SERVER_CONFIG:
-				if (ParsingUtils::matcher(line, "[route:")) {
-					parsedConfigs[currentServerConfig.server_name] = currentServerConfig;
-					state = ROUTE_CONFIG;
-					// should I initialize the new route config here ?
-				} else {
+          if (ParsingUtils::matcher(line, "port"))
+            ConfigurationParser::parsePort(line, currentServerConfig);
 
-					if (ParsingUtils::matcher(line, "host"))
-						ConfigurationParser::parseHost(line, currentServerConfig);
+          if (ParsingUtils::matcher(line, "error_page"))
+            ConfigurationParser::parseErrorPages(line, currentServerConfig);
 
-					if (ParsingUtils::matcher(line, "port"))
-						ConfigurationParser::parsePort(line, currentServerConfig);
+          if (ParsingUtils::matcher(line, "client_max_body_size"))
+            ConfigurationParser::parseClientMaxBodySize(line, currentServerConfig);
+        }
+      case ROUTE_CONFIG:
+        if (ParsingUtils::matcher(line, "[server:"))
+        {
+          state = SERVER_CONFIG; // save the route to the current server before switching to a new server.
+          currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
+        }
+        if (ParsingUtils::matcher(line, "[route:"))
+        {
+          currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig); // save the route to the current server before switching to a new route.
+          state = ROUTE_CONFIG;
+        }
 
-					if (ParsingUtils::matcher(line, "error_page"))
-						ConfigurationParser::parseErrorPages(line, currentServerConfig);
+        if (ParsingUtils::matcher(line, "methods"))
+          ConfigurationParser::parseMethods(line, currentRouteConfig);
 
-					if (ParsingUtils::matcher(line, "client_max_body_size"))
-						ConfigurationParser::parseClientMaxBodySize(line, currentServerConfig);
-				}
+        if (ParsingUtils::matcher(line, "redirect"))
+          ConfigurationParser::parseRedirect(line, currentRouteConfig);
 
-			case ROUTE_CONFIG:
-				if (ParsingUtils::matcher(line, "[server:]")) {
+        if (ParsingUtils::matcher(line, "root"))
+          ConfigurationParser::parseRoot(line, currentRouteConfig);
 
-				}
+        if (ParsingUtils::matcher(line, "directory_listing"))
+          ConfigurationParser::parseDirectoryListing(line, currentRouteConfig);
 
-}
-		if (ParsingUtils::matcher(line, "[route:")) {
-			if (ParsingRoute == true)
-				currentServerConfig.routes[currentRouteConfig.route_path] = currentRouteConfig;
-			ParsingRoute = true;
-			const std::string prefix = "[server:";
-			const std::string suffix = "]";
+        if (ParsingUtils::matcher(line, "default_file"))
+          ConfigurationParser::parseDefaultFile(line, currentRouteConfig);
 
-			// Check if the line has the correct prefix and suffix
-			if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + line);
-			std::string routeName = line.substr(prefix.length(), line.length() - suffix.length());
-			if (isValidRoute(routeName) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName);
-			currentRouteConfig.route_path = routeName;
-		}
+        if (ParsingUtils::matcher(line, "cgi_extensions"))
+          ConfigurationParser::parseCgiExtensions(line, currentRouteConfig);
 
+        if (ParsingUtils::matcher(line, "allow_file_upload"))
+          ConfigurationParser::parseAllowFileUpload(line, currentRouteConfig);
 
-		if (ParsingUtils::matcher(line, "error_page")) {
-		}
-
-if (ParsingUtils::matcher(line, "methods"))
-{
-
-}
-
-
-		if (ParsingUtils::matcher(line, "root"))
-		{
-			std::istringstream iss(line);
-			std::string root;
-			iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-			getline(iss, root);
-			if (root.empty())
-			{
-				Logger::log(WARNING, "PARSING: root path is empty, reverting to default root.");
-				root = getCurrentExecutablePath();
-			}
-			if (pathExists(root) == false)
-				throw ConfigurationParser::InvalidConfigurationException("Root path does not exist or is not readable");
-			currentRouteConfig.root_directory_path = root;
-		}
-	}
+        if (ParsingUtils::matcher(line, "upload_location"))
+          ConfigurationParser::parseUploadLocation(line, currentRouteConfig);
+    }
+  }
+  return parsedConfigs;
 }
 
 // Parse server Config

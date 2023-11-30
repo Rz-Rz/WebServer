@@ -60,6 +60,11 @@ std::string ParsingUtils::toLower(std::string& str) {
     return lowerStr;
 }
 
+void ParsingUtils::toLowerInline(std::string& str) {
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+}
+
+
 bool ParsingUtils::controlCharacters(const std::string &str)
 {
 	for (size_t i = 0; i < str.length(); i++) {
@@ -101,3 +106,33 @@ bool ParsingUtils::isValidIPv4(const std::string& host) {
     int result = inet_pton(AF_INET, host.c_str(), &(sa.sin_addr));
     return result == 1;
 }
+
+bool ParsingUtils::containsIllegalUrlCharacters(const std::string& path) {
+  const std::string legalChars = "-_.~/";  // Legal alongside alphanumeric characters
+
+  for (size_t i = 0; i < path.length(); ++i) {
+    char ch = path[i];
+
+    if (!std::isalnum(static_cast<unsigned char>(ch)) && legalChars.find(ch) == std::string::npos) {
+      return true;  // Found illegal character
+    }
+  }
+  return false;
+}
+
+void ParsingUtils::trimAndLower(std::string& str) {
+  trim(str);
+  toLowerInline(str);
+}
+
+bool ParsingUtils::isAbsoluteUrl(const std::string& url) {
+    // Common schemes found in absolute URLs
+    static const std::string schemes[] = {"http://", "https://", "ftp://", "ftps://", "mailto:", "file:"};
+    for (size_t i = 0; i < sizeof(schemes) / sizeof(schemes[0]); ++i) {
+        if (url.compare(0, schemes[i].length(), schemes[i]) == 0) {
+            return true; // The URL starts with a known scheme
+        }
+    }
+    return false;
+}
+

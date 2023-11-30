@@ -13,7 +13,7 @@ public:
     void setGetMethod(const bool value);
     void setPostMethod(const bool value);
     void setRedirectLocation(const std::string& redirect);
-    void setHasRedirect(const bool value);
+    void setRedirect(const bool value);
     void setRootDirectoryPath(const std::string& path);
     void setDirectoryListing(bool listing);
     void setDefaultFile(const std::string& file);
@@ -26,7 +26,7 @@ public:
     bool getGetMethod() const;
     bool getPostMethod() const;
     std::string getRedirectLocation() const;
-    bool getHasRedirect() const;
+    bool getRedirect() const;
     std::string getRootDirectoryPath() const;
     bool getDirectoryListing() const;
     std::string getDefaultFile() const;

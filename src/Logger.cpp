@@ -15,10 +15,9 @@ Logger::~Logger() {
 }
 
 void Logger::log(Level level, const std::string& message) {
-	if (logFile)
-		logFile << getCurrentTime() << getLevelString(level) << ": " << message << std::endl;
-	if (level == WARNING || level == ERROR)
-		std::cerr << getLevelString(level) << ": " << message << std::endl;
+  if (logFile)
+    logFile << getCurrentTime() << getLevelString(level) << ": " << message << std::endl;
+  std::cerr << getLevelString(level) << ": " << message << std::endl;
 }
 
 std::string Logger::getCurrentTime() {

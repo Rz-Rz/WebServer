@@ -32,7 +32,7 @@ void Route::setRedirectLocation(const std::string& redirect)
     this->redirect = redirect;
 }
 
-void Route::setHasRedirect(const bool value)
+void Route::setRedirect(const bool value)
 {
     this->has_redirect = value;
 }
@@ -88,7 +88,7 @@ bool Route::getPostMethod(void) const
     return this->postMethod;
 }
 
-bool Route::getHasRedirect(void) const
+bool Route::getRedirect(void) const
 {
     return this->has_redirect;
 }

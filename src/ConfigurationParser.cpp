@@ -291,6 +291,9 @@ void ConfigurationParser::parseRoute(std::string& line, Route& route) {
     if (routeName.find("..") != std::string::npos) {
         throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName); // Found ".."
     }
+    if (ParsingUtils::containsIllegalUrlCharacters(routeName)) {
+        throw ConfigurationParser::InvalidConfigurationException("Invalid route name: " + routeName); // Found illegal character
+    }
     if (routeName[0] != '/') {
       Logger::log(WARNING, "route name must start with a '/', prefixed " + routeName + " with a '/'");
       ParsingUtils::setPrefixString(routeName, "/");
@@ -303,27 +306,23 @@ void ConfigurationParser::parseMethods(std::string& line, Route& route) {
     std::string method;
     iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  // Ignore everything until the '='
     while (iss >> method) {
-	if (method.empty()) {
-	    Logger::log(WARNING, "method are empty, GET and POST will be accepted for route " + route.getRoutePath());
-	    route.setGetMethod(true);
-	    route.setPostMethod(true);
-	}
-	if (ParsingUtils::matcher(method, "GET"))
-	{
-		Logger::log(INFO, "GET method found for route " + route.getRoutePath());
-		route.setGetMethod(true);
-	}
-	else if (ParsingUtils::matcher(method, "POST"))
-	{
-		Logger::log(INFO, "POST method found for route " + route.getRoutePath());
-		route.setPostMethod(true);
-	}
-	else
-	{
-		Logger::log(WARNING, "Invalid method: " + method + ", GET and POST will be accepted for route " + route.getRoutePath());
-		route.setGetMethod(true);
-		route.setPostMethod(true);
-	}
+      if (method.empty()) {
+        Logger::log(WARNING, "method are empty, GET and POST will be accepted for route " + route.getRoutePath());
+        route.setGetMethod(true);
+        route.setPostMethod(true);
+      }
+      if (ParsingUtils::matcher(method, "GET"))
+      {
+        Logger::log(INFO, "GET method found for route " + route.getRoutePath());
+        route.setGetMethod(true);
+      }
+      else if (ParsingUtils::matcher(method, "POST"))
+      {
+        Logger::log(INFO, "POST method found for route " + route.getRoutePath());
+        route.setPostMethod(true);
+      }
+      else
+        throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
     }
 }
 
@@ -334,18 +333,22 @@ void ConfigurationParser::parseRedirect(std::string& line, Route& route) {
     getline(iss, redirect);  // Read the rest into value
     if (redirect.empty()) {
 	    Logger::log(WARNING, "redirect is empty, no redirect is registered for route " + route.getRoutePath());
+      route.setRedirect(false);
 	    return;
     }
     if (ParsingUtils::controlCharacters(redirect))
     {
 	    Logger::log(WARNING, "Control characters found in redirect: " + redirect + ", no redirect is registered for route " + route.getRoutePath());
+      route.setRedirect(false);
 	    return;
     }
-    if (redirect[0] != '/') {
+    ParsingUtils::trimAndLower(redirect);
+    if (!ParsingUtils::isAbsoluteUrl(redirect) && redirect[0] != '/') {
 	    Logger::log(WARNING, "redirect must start with a '/', prefixed " + redirect + " with a '/'"); 
 	    ParsingUtils::setPrefixString(redirect, "/");
     }
     route.setRedirectLocation(redirect);
+    route.setRedirect(true);
 }
 
 void ConfigurationParser::parseRoot(std::string& line, Route& route) {
@@ -358,20 +361,20 @@ void ConfigurationParser::parseRoot(std::string& line, Route& route) {
         Logger::log(WARNING, "root is empty, using default root: " + root);
         root = "/var/www/webserver/"; // Default compiled-in path
     }
+    // Check for relative paths leading outside of server root
+    if (root.find("../") != std::string::npos) {
+        throw ConfigurationParser::InvalidConfigurationException("Relative paths outside server root are forbidden: " + root);
+    }
     if (ParsingUtils::doesPathExist(root) == false) {
 	    Logger::log(WARNING, "root path does not exist: " + root + " reverting to default root.");
-	    root = "/var/www/webserver/"; // Default compiled-in path
+	    root = "/var/www/webserver/";
     } else if (ParsingUtils::hasReadPermissions(root) == false) {
 	    Logger::log(WARNING, "root path does not have read permissions: " + root + " reverting to default root.");
-	    root = "/var/www/webserver/"; // Default compiled-in path
+	    root = "/var/www/webserver/";
     }
     else if (ParsingUtils::hasWritePermissions(root) == false) {
 	    Logger::log(WARNING, "root path does not have write permissions: " + root + " reverting to default root.");
 	    root = "/var/www/webserver/"; // Default compiled-in path
-    }
-    // Check for relative paths leading outside of server root
-    if (root.find("../") != std::string::npos) {
-        throw ConfigurationParser::InvalidConfigurationException("Relative paths outside server root are forbidden: " + root);
     }
     route.setRootDirectoryPath(root);
 }

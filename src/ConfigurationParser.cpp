@@ -125,6 +125,7 @@ void ConfigurationParser::parseHost(std::string& line, Server& serverConfig) {
 	if (host.empty()) {
 		throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
 	}
+  ParsingUtils::trimAndLower(host);
 	if (ParsingUtils::isValidIPv4(host) == false)
 		throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
 	serverConfig.setHost(host);
@@ -139,6 +140,9 @@ void ConfigurationParser::parsePort(std::string& line, Server& serverConfig) {
 		throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
 	std::istringstream iss2(portStr);
 	int port;
+  ParsingUtils::trimAndLower(portStr);
+  if (ParsingUtils::containsAlpha(portStr))
+    throw ConfigurationParser::InvalidConfigurationException("Port cannot contain alpha characters");
 	iss2 >> port;
 	if (port < 1 || port > 65535)
 		throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
@@ -150,15 +154,15 @@ void ConfigurationParser::parseServerName(std::string &line, Server& serverConfi
 	const std::string prefix = "[server:";
 	const std::string suffix = "]";
 	
-	// Check if the line has the correct prefix and suffix
-	if (line.substr(0, prefix.length()) != prefix || line.substr(line.length() - suffix.length()) != suffix)
-		serverConfig.setServerName("DefaultServerName");;
-	std::string serverName = line.substr(prefix.length(), line.length() - (prefix.length() + suffix.length()));
+  if (line[0] != '[' || line[line.length() - 1] != ']')
+    throw::ConfigurationParser::InvalidConfigurationException("Invalid server name: " + line);
+  std::string serverName = line.substr(prefix.length(), line.length() - (prefix.length() + suffix.length()));
+  ParsingUtils::trim(serverName);  // Trim leading/trailing spaces
 	if (serverName.empty() == true)
-		serverConfig.setServerName("DefaultServerName");;
+    throw::ConfigurationParser::InvalidConfigurationException("Invalid server name: " + line);
 	// Validate the server name according to the rules
 	if (serverName.length() > 253 || serverName.find("..") != std::string::npos)
-		serverConfig.setServerName("DefaultServerName");;
+    throw::ConfigurationParser::InvalidConfigurationException("Invalid server name: " + serverName);
 	serverConfig.setServerName(serverName);
 }
 
@@ -194,6 +198,7 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
 	tokens.pop_back(); // Remove the path from the list of tokens
 
 	if (!ParsingUtils::doesPathExist(path)) {
+    std::cout << "----------------PATH:" << path << std::endl;
 		Logger::log(WARNING, "error_page path does not exist or is not readable, reverting to default.");
 		return;
 	}
@@ -226,46 +231,60 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
 }
 
 void ConfigurationParser::parseClientMaxBodySize(std::string& line, Server& serverConfig) {
-	std::istringstream iss(line);
-	std::string sizeStr;
-	iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-	getline(iss, sizeStr);
+    std::istringstream iss(line);
+    std::string sizeStr;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');
+    getline(iss, sizeStr);
 
-	if (sizeStr.empty()) {
-		Logger::log(WARNING, "client_max_body_size is empty, reverting to default.");
-		serverConfig.setMaxClientBodySize(1000000);  // Default value
-		return;
-	}
+    if (sizeStr.empty()) {
+        Logger::log(WARNING, "client_max_body_size is empty, reverting to default.");
+        serverConfig.setMaxClientBodySize(1000000);  // Default value
+        return;
+    }
 
-	long long size = 0;
-	long long multiplier = 1;  // Default is bytes
-	size_t i = 0;
-	bool invalidCharacterFound = false;
+    char* end;
+    errno = 0;
+    long long size = std::strtol(sizeStr.c_str(), &end, 10);
 
-	// Parse the number part
-	for (; i < sizeStr.size() && isdigit(sizeStr[i]); ++i) {
-		size = size * 10 + (sizeStr[i] - '0');
-	}
+    if (errno == ERANGE || size < 0 || end == sizeStr.c_str()) {
+        Logger::log(WARNING, "client_max_body_size is not a valid number, reverting to default.");
+        serverConfig.setMaxClientBodySize(1000000);  // Default value
+        return;
+    }
 
-	// Check for suffix and set the multiplier
-	if (i < sizeStr.size()) {
-		char suffix = sizeStr[i++];
-		if (suffix == 'k' || suffix == 'K') {
-			multiplier = 1024;  // KB
-		} else if (suffix == 'm' || suffix == 'M') {
-			multiplier = 1024 * 1024;  // MB
-		} else {
-			invalidCharacterFound = true;
-		}
-	}
+    long long multiplier = 1;  // Default is bytes
+    if (*end != '\0') { // Suffix present
+        switch (*end) {
+            case 'k':
+            case 'K':
+                multiplier = 1024;
+                break;
+            case 'm':
+            case 'M':
+                multiplier = 1024 * 1024;
+                break;
+            default:
+                Logger::log(WARNING, "Invalid client_max_body_size value, reverting to default.");
+                serverConfig.setMaxClientBodySize(1000000);  // Default value
+                return;
+        }
+    }
 
-	// Check for extra characters or invalid characters
-	if (i != sizeStr.size() || invalidCharacterFound) {
-		Logger::log(WARNING, "Invalid client_max_body_size value, reverting to default.");
-		serverConfig.setMaxClientBodySize(1000000);  // Default value
-	} else {
-		serverConfig.setMaxClientBodySize(size * multiplier);
-	}
+    if (size > LLONG_MAX / multiplier) {
+        Logger::log(WARNING, "client_max_body_size calculation overflow, reverting to default.");
+        serverConfig.setMaxClientBodySize(1000000);  // Default value
+        return;
+    }
+
+    size *= multiplier;
+    const long long maxSize = 100LL * 1024 * 1024;  // 100 MB in bytes
+    if (size > maxSize) {
+        Logger::log(WARNING, "client_max_body_size exceeds 100 MB limit, reverting to default.");
+        serverConfig.setMaxClientBodySize(1000000);  // Default value
+        return;
+    }
+
+    serverConfig.setMaxClientBodySize(size);
 }
 
 // Parse route Config
@@ -461,49 +480,48 @@ void ConfigurationParser::parseCgiExtensions(std::string& line, Route& route) {
 }
 
 void ConfigurationParser::parseAllowFileUpload(std::string& line, Route& route) {
-    std::istringstream iss(line);
-    std::string allow;
-    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-    getline(iss, allow); 
+  std::istringstream iss(line);
+  std::string allow;
+  iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+  getline(iss, allow); 
 
-    if (allow.empty()) {
-	Logger::log(WARNING, "allow_file_upload is empty, reverting to default.");
-	route.setAllowFileUpload(false);
-	return;
-    }
-    if (ParsingUtils::matcher(allow, "on")) {
-	Logger::log(INFO, "allow_file_upload is on for route " + route.getRoutePath());
-	route.setAllowFileUpload(true);
-    } else if (ParsingUtils::matcher(allow, "off")) {
-	Logger::log(INFO, "allow_file_upload is off for route " + route.getRoutePath());
-	route.setAllowFileUpload(false);
-    } else {
-	Logger::log(WARNING, "Invalid allow_file_upload value: " + allow + ", reverting to default (false).");
-	route.setAllowFileUpload(false);
-    }
+  if (allow.empty()) {
+    Logger::log(WARNING, "allow_file_upload is empty, reverting to default.");
+    route.setAllowFileUpload(false);
+    return;
+  }
+  if (ParsingUtils::matcher(allow, "on")) {
+    Logger::log(INFO, "allow_file_upload is on for route " + route.getRoutePath());
+    route.setAllowFileUpload(true);
+  } else if (ParsingUtils::matcher(allow, "off")) {
+    Logger::log(INFO, "allow_file_upload is off for route " + route.getRoutePath());
+    route.setAllowFileUpload(false);
+  } else {
+    Logger::log(WARNING, "Invalid allow_file_upload value: " + allow + ", reverting to default (false).");
+    route.setAllowFileUpload(false);
+  }
 }
 
 void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
-    std::istringstream iss(line);
-    std::string location;
-    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-    getline(iss, location); 
+  std::istringstream iss(line);
+  std::string location;
+  iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+  getline(iss, location); 
 
-    if (location.empty()) {
-	Logger::log(WARNING, "upload_location is empty, reverting to default.");
-	route.setUploadLocation("/var/www/webserver/uploads/");
-	return;
-    }
-    if (ParsingUtils::controlCharacters(location)) {
-	Logger::log(WARNING, "Control characters found in upload_location: " + location + ", reverting to default.");
-	route.setUploadLocation("/var/www/webserver/uploads/");
-	return;
-    }
-    if (location[0] != '/') {
-	Logger::log(WARNING, "upload_location must start with a '/', prefixed " + location + " with a '/'"); 
-	ParsingUtils::setPrefixString(location, "/");
-    }
-    route.setUploadLocation(location);
+  if (location.empty()) {
+    Logger::log(WARNING, "upload_location is empty, reverting to default.");
+    route.setUploadLocation("/var/www/webserver/uploads/");
+    return;
+  }
+  if (ParsingUtils::controlCharacters(location)) {
+    throw ConfigurationParser::InvalidConfigurationException("Control characters found in upload_location: " + location);
+  }
+  ParsingUtils::trimAndLower(location);
+  if (location[0] != '/') {
+    Logger::log(WARNING, "upload_location must start with a '/', prefixed " + location + " with a '/'"); 
+    ParsingUtils::setPrefixString(location, "/");
+  }
+  route.setUploadLocation(location);
 }
 
 std::string getCurrentExecutablePath() {

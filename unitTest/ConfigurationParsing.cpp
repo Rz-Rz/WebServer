@@ -21,6 +21,7 @@ bool createTestDirectory(const std::string &path, mode_t permissions) {
     return true;
 }
 
+
 // Remove a directory
 bool removeTestDirectory(const std::string &path) {
     if (rmdir(path.c_str()) != 0) {
@@ -35,6 +36,20 @@ bool doesDirectoryExist(const std::string &path) {
     return (stat(path.c_str(), &buffer) == 0 && S_ISDIR(buffer.st_mode));
 }
 
+// Create a directory and a file within it
+bool createTestDirectoryAndFile(const std::string &dirPath, const std::string &filePath) {
+    if (mkdir(dirPath.c_str(), 0755) != 0) {
+        return false;
+    }
+    std::ofstream outfile(filePath.c_str());
+    if (!outfile.is_open()) {
+        removeTestDirectory(dirPath);  // Cleanup if file creation fails
+        return false;
+    }
+    outfile << "Error page content" << std::endl;
+    outfile.close();
+    return true;
+}
 // ------------------------------------ ConfigurationParser --------------------------------
 // ------------------------------------- Routes ------------------------------------
 
@@ -564,6 +579,65 @@ Test(configuration_parser, parse_allow_file_upload_with_spaces) {
     cr_assert(route.getAllowFileUpload(), "Should handle values with leading/trailing spaces");
 }
 
+// ------------------------------- upload location ----------------------------
+Test(configuration_parser, parse_upload_location_control_chars) {
+  std::string line = "upload_location=/var/www\x01/uploads";
+  Route route;
+  cr_assert_throw(ConfigurationParser::parseUploadLocation(line, route), ConfigurationParser::InvalidConfigurationException, "Should throw an exception for control characters");
+}
+
+Test(configuration_parser, parse_upload_location_empty) {
+    std::string line = "upload_location=";
+    Route route;
+    ConfigurationParser::parseUploadLocation(line, route);
+    cr_assert_eq(route.getUploadLocation(), "/var/www/webserver/uploads/", "Should set default upload location for empty value");
+}
+
+// Test for upload location without leading slash
+Test(configuration_parser, parse_upload_location_no_leading_slash) {
+    std::string line = "upload_location=var/www/uploads";
+    Route route;
+    ConfigurationParser::parseUploadLocation(line, route);
+    cr_assert_eq(route.getUploadLocation(), "/var/www/uploads", "Should prefix upload location with '/'");
+}
+
+// Test for valid upload location
+Test(configuration_parser, parse_upload_location_valid) {
+    std::string line = "upload_location=/var/www/uploads";
+    Route route;
+    ConfigurationParser::parseUploadLocation(line, route);
+    cr_assert_eq(route.getUploadLocation(), "/var/www/uploads", "Should set the specified upload location");
+}
+
+// Blindspot tests
+// Test for upload location with spaces
+Test(configuration_parser, parse_upload_location_with_spaces) {
+    std::string line = "upload_location=/var/www/ upload spaces ";
+    Route route;
+    ConfigurationParser::parseUploadLocation(line, route);
+    cr_assert_eq(route.getUploadLocation(), "/var/www/ upload spaces", "Should handle upload locations with spaces");
+}
+
+// Test for unusual but valid upload location
+Test(configuration_parser, parse_upload_location_unusual) {
+    std::string line = "upload_location=/var/www/custom@123/uploads";
+    Route route;
+    ConfigurationParser::parseUploadLocation(line, route);
+    cr_assert_eq(route.getUploadLocation(), "/var/www/custom@123/uploads", "Should handle unusual but valid upload locations");
+}
+
+// Test for overly long upload location path
+Test(configuration_parser, parse_upload_location_long_path) {
+    std::string longPath(1000, 'a'); // 1000 characters long
+    std::string line = "upload_location=/" + longPath;
+    Route route;
+    ConfigurationParser::parseUploadLocation(line, route);
+    cr_assert_eq(route.getUploadLocation(), "/" + longPath, "Should handle overly long upload location paths");
+}
+
+// -  
+
+
 // ------------------------------------ ParsingUtils --------------------------------
 Test(ParsingUtils, isNotSpace_with_space) {
     cr_assert_eq(ParsingUtils::isNotSpace(' '), false, "isNotSpace should return false for a space character");
@@ -596,6 +670,261 @@ Test(ParsingUtils, rtrim_with_trailing_spaces) {
     ParsingUtils::rtrim(str);
     cr_assert_str_eq(str.c_str(), "test", "rtrim should remove all trailing spaces");
 }
+
+// ------------------------------- Server checks ------------------------------
+// ------------------------------- host parsing -------------------------------
+// Test for empty host
+Test(configuration_parser, parse_host_empty) {
+    std::string line = "host=";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parseHost(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for empty host");
+}
+
+// Test for valid IPv4 address
+Test(configuration_parser, parse_host_valid_ipv4) {
+    std::string line = "host=192.168.1.1";
+    Server serverConfig;
+    ConfigurationParser::parseHost(line, serverConfig);
+    cr_assert_eq(serverConfig.getHost(), "192.168.1.1", "Should set a valid IPv4 address");
+}
+
+// Test for invalid IPv4 address
+Test(configuration_parser, parse_host_invalid_ipv4) {
+    std::string line = "host=256.256.256.256";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parseHost(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for invalid IPv4 address");
+}
+
+// Blindspot tests
+// Test for IPv4 address with additional characters
+Test(configuration_parser, parse_host_ipv4_with_additional_chars) {
+    std::string line = "host=192.168.1.1abc";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parseHost(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for IPv4 address with additional characters");
+}
+
+// Test for IPv4 address with leading/trailing spaces
+Test(configuration_parser, parse_host_ipv4_with_spaces) {
+    std::string line = "host= 192.168.1.1 ";
+    Server serverConfig;
+    ConfigurationParser::parseHost(line, serverConfig);
+    cr_assert_eq(serverConfig.getHost(), "192.168.1.1", "Should set a valid IPv4 address and trim spaces");
+}
+
+// Test for IPv4 address in alternative formats
+Test(configuration_parser, parse_host_ipv4_alternative_format) {
+    std::string line = "host=0300.0250.01.01"; // Octal representation
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parseHost(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for IPv4 address in alternative format");
+}
+
+// ------------------------------- port parsing -------------------------------
+
+// Test for empty port
+Test(configuration_parser, parse_port_empty) {
+    std::string line = "port=";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parsePort(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for empty port");
+}
+
+// Test for valid port
+Test(configuration_parser, parse_port_valid) {
+    std::string line = "port=8080";
+    Server serverConfig;
+    ConfigurationParser::parsePort(line, serverConfig);
+    cr_assert_eq(serverConfig.getPort(), 8080, "Should set a valid port");
+}
+
+// Test for port out of range (too high)
+Test(configuration_parser, parse_port_too_high) {
+    std::string line = "port=65536";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parsePort(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for port too high");
+}
+
+// Test for port out of range (negative)
+Test(configuration_parser, parse_port_negative) {
+    std::string line = "port=-1";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parsePort(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for negative port");
+}
+
+// Blindspot tests
+// Test for non-numeric port
+Test(configuration_parser, parse_port_non_numeric) {
+    std::string line = "port=abc";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parsePort(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for non-numeric port");
+}
+
+// Test for port with leading zeros
+Test(configuration_parser, parse_port_leading_zeros) {
+    std::string line = "port=00080";
+    Server serverConfig;
+    ConfigurationParser::parsePort(line, serverConfig);
+    cr_assert_eq(serverConfig.getPort(), 80, "Should correctly interpret port with leading zeros");
+}
+
+// Test for port with spaces
+Test(configuration_parser, parse_port_with_spaces) {
+    std::string line = "port= 8080 ";
+    Server serverConfig;
+    ConfigurationParser::parsePort(line, serverConfig);
+    cr_assert_eq(serverConfig.getPort(), 8080, "Should handle port numbers with spaces");
+}
+
+// Test for port with additional characters
+Test(configuration_parser, parse_port_with_additional_chars) {
+    std::string line = "port=8080abc";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parsePort(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for port with additional characters");
+}
+
+// ------------------------------ server name parsing ------------------------------
+// Test for valid server name
+Test(configuration_parser, parse_server_name_valid) {
+    std::string line = "[server:ValidServerName]";
+    Server serverConfig;
+    ConfigurationParser::parseServerName(line, serverConfig);
+    cr_assert_eq(serverConfig.getServerName(), "ValidServerName", "Should set the correct server name");
+}
+
+// Test for invalid server name (wrong format)
+Test(configuration_parser, parse_server_name_wrong_format) {
+    std::string line = "server:InvalidFormat";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parseServerName(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for wrong format");
+}
+
+// Test for too long server name
+Test(configuration_parser, parse_server_name_too_long) {
+    std::string longName(300, 'a'); // 300 characters long
+    std::string line = "[server:" + longName + "]";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parseServerName(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for too long name");
+}
+
+// Blindspot tests
+// Test for server name with consecutive dots
+Test(configuration_parser, parse_server_name_consecutive_dots) {
+    std::string line = "[server:Invalid..Name]";
+    Server serverConfig;
+    cr_assert_throw(ConfigurationParser::parseServerName(line, serverConfig), ConfigurationParser::InvalidConfigurationException, "Should throw exception for consecutive dots");
+}
+
+// Test for server name with leading/trailing spaces
+Test(configuration_parser, parse_server_name_with_spaces) {
+    std::string line = "[server:  ServerWithSpaces  ]";
+    Server serverConfig;
+    ConfigurationParser::parseServerName(line, serverConfig);
+    cr_assert_eq(serverConfig.getServerName(), "ServerWithSpaces", "Should handle server names with spaces correctly");
+}
+
+// ------------------------------ Error Page Parsing ------------------------------
+Test(configuration_parser, parse_error_pages_valid_with_existing_path) {
+    const std::string tempDir = "/tmp/test_error_pages/";
+    const std::string tempFilePath = tempDir + "default.html";
+    if (createTestDirectoryAndFile(tempDir, tempFilePath) == false) // Create test directory and file
+        std::cout << "CRITICAL: Could not create test directory and file for error page parsing unit tests" << std::endl;
+
+    std::string line = "error_page=404,500," + tempFilePath;
+    Server serverConfig;
+    ConfigurationParser::parseErrorPages(line, serverConfig);
+
+    cr_assert_eq(serverConfig.getErrorPage(404), tempFilePath, "404 error page should be set correctly");
+    cr_assert_eq(serverConfig.getErrorPage(500), tempFilePath, "500 error page should be set correctly");
+
+    removeTestDirectory(tempDir); // Clean up
+}
+
+// Test for invalid format (missing '=')
+Test(configuration_parser, parse_error_pages_missing_equals) {
+    std::string line = "error_page 404 /errors/default.html";
+    Server serverConfig;
+    ConfigurationParser::parseErrorPages(line, serverConfig);
+    cr_assert_eq(serverConfig.getErrorPage(404), "", "Default error page should be used for incorrect format");
+}
+
+// Test for non-numeric error codes
+Test(configuration_parser, parse_error_pages_non_numeric_code) {
+    std::string line = "error_page=abc,/errors/default.html";
+    Server serverConfig;
+    ConfigurationParser::parseErrorPages(line, serverConfig);
+    cr_assert_eq(serverConfig.getErrorPage(0), "", "Default error page should be used for non-numeric error code");
+}
+
+// Test for error code out of range
+Test(configuration_parser, parse_error_pages_code_out_of_range) {
+    std::string line = "error_page=700,/errors/default.html";
+    Server serverConfig;
+    ConfigurationParser::parseErrorPages(line, serverConfig);
+    cr_assert_eq(serverConfig.getErrorPage(700), "", "Default error page should be used for out-of-range error code");
+}
+
+// Test for mixed valid and invalid error codes
+Test(configuration_parser, parse_error_pages_mixed_valid_invalid) {
+    createTestDirectoryAndFile("/tmp/test_error_pages/", "/tmp/test_error_pages/default.html");
+    std::string line = "error_page=404,abc,500,/tmp/test_error_pages/default.html";
+    Server serverConfig;
+    ConfigurationParser::parseErrorPages(line, serverConfig);
+    cr_assert_eq(serverConfig.getErrorPage(404), "/tmp/test_error_pages/default.html", "Valid 404 error page should be set");
+    cr_assert_eq(serverConfig.getErrorPage(500), "/tmp/test_error_pages/default.html", "Valid 500 error page should be set");
+    cr_assert_eq(serverConfig.getErrorPage(0), "", "Default error page should be used for invalid 'abc' error code");
+    removeTestDirectory("/tmp/test_error_pages/");
+}
+
+// -------------------------------- Max body size --------------------------
+// Test for valid max body size without suffix
+Test(configuration_parser, parse_client_max_body_size_valid_no_suffix) {
+    std::string line = "client_max_body_size=5000";
+    Server serverConfig;
+    ConfigurationParser::parseClientMaxBodySize(line, serverConfig);
+    cr_assert_eq(serverConfig.getMaxClientBodySize(), 5000LL, "Max body size should be set correctly without suffix");
+}
+
+// Test for valid max body size with suffix 'K'
+Test(configuration_parser, parse_client_max_body_size_valid_with_K_suffix) {
+    std::string line = "client_max_body_size=5K";
+    Server serverConfig;
+    ConfigurationParser::parseClientMaxBodySize(line, serverConfig);
+    cr_assert_eq(serverConfig.getMaxClientBodySize(), 5LL * 1024, "Max body size should be set correctly with 'K' suffix");
+}
+
+// Test for invalid non-numeric value
+Test(configuration_parser, parse_client_max_body_size_invalid_non_numeric) {
+    std::string line = "client_max_body_size=abc";
+    Server serverConfig;
+    ConfigurationParser::parseClientMaxBodySize(line, serverConfig);
+    cr_assert_eq(serverConfig.getMaxClientBodySize(), 1000000LL, "Default max body size should be used for non-numeric value");
+}
+
+// Test for unsupported suffix
+Test(configuration_parser, parse_client_max_body_size_unsupported_suffix) {
+    std::string line = "client_max_body_size=500G";
+    Server serverConfig;
+    ConfigurationParser::parseClientMaxBodySize(line, serverConfig);
+    cr_assert_eq(serverConfig.getMaxClientBodySize(), 1000000LL, "Default max body size should be used for unsupported suffix");
+}
+
+// Test for empty value
+Test(configuration_parser, parse_client_max_body_size_empty) {
+    std::string line = "client_max_body_size=";
+    Server serverConfig;
+    ConfigurationParser::parseClientMaxBodySize(line, serverConfig);
+    cr_assert_eq(serverConfig.getMaxClientBodySize(), 1000000LL, "Default max body size should be used for empty value");
+}
+
+// Test for extremely large value
+Test(configuration_parser, parse_client_max_body_size_extremely_large) {
+    std::string line = "client_max_body_size=999999999999";  // An extremely large value
+    Server serverConfig;
+    ConfigurationParser::parseClientMaxBodySize(line, serverConfig);
+
+    // Check if the function reverts to the default value when faced with an extremely large value
+    const long long defaultMaxBodySize = 1000000;  // Default value (1 MB in bytes)
+    cr_assert_eq(serverConfig.getMaxClientBodySize(), defaultMaxBodySize, "Default max body size should be used for extremely large value");
+}
+
 
 // -------------------------------- Matcher --------------------------------
 Test(ParsingUtils, matcher_whole_word) {

@@ -136,3 +136,11 @@ bool ParsingUtils::isAbsoluteUrl(const std::string& url) {
     return false;
 }
 
+bool ParsingUtils::containsAlpha(std::string& str) {
+  for (size_t i = 0; i < str.length(); ++i) {
+    if (std::isalpha(str[i])) {
+      return true;
+    }
+  }
+  return false;
+}

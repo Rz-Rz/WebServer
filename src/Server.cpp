@@ -63,7 +63,12 @@ std::string Server::getServerName() const
 
 std::string Server::getErrorPage(int errorCode) const
 {
-	    return this->errorPages.at(errorCode);
+  std::map<int, std::string>::const_iterator it = this->errorPages.find(errorCode);
+  if (it != this->errorPages.end()) {
+    return it->second;
+  } else {
+    return ""; // Return empty string if errorCode is not found
+  }
 }
 
 bool Server::hasCustomErrorPage(void) const

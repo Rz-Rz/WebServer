@@ -20,6 +20,7 @@ class ParsingUtils {
     static bool isValidIPv4(const std::string& host);
     static bool containsIllegalUrlCharacters(const std::string& url);
     static void trimAndLower(std::string& str);
+    static bool containsAlpha(std::string& str);
 
 		// Path Utils
 		static bool doesPathExist(const std::string& path);

@@ -54,6 +54,20 @@ bool ParsingUtils::matcher(const std::string& str, const std::string& toFind) {
 	return false;
 }
 
+bool ParsingUtils::simpleMatcher(const std::string& str, const std::string& toFind) {
+    std::string trimmedStr = trim_copy(str);
+    std::string trimmedToFind = trim_copy(toFind);
+
+    // Convert both strings to lowercase for case-insensitive matching
+    std::string lowerStr = toLower(trimmedStr);
+    std::string lowerToFind = toLower(trimmedToFind);
+
+    // Check if 'toFind' is a substring of 'str'
+    return lowerStr.find(lowerToFind) != std::string::npos;
+}
+
+
+
 std::string ParsingUtils::toLower(std::string& str) {
     std::string lowerStr = str;
     std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);

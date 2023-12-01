@@ -21,6 +21,7 @@ class ParsingUtils {
     static bool containsIllegalUrlCharacters(const std::string& url);
     static void trimAndLower(std::string& str);
     static bool containsAlpha(std::string& str);
+    static bool simpleMatcher(const std::string& str, const std::string& toFind);
 
 		// Path Utils
 		static bool doesPathExist(const std::string& path);

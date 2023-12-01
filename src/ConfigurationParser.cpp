@@ -21,11 +21,11 @@ const char *ConfigurationParser::InvalidConfigurationException::what() const thr
 }
 
 
-ConfigurationParser::ConfigurationParser(const std::string& filename) : filename(filename) {}
+ConfigurationParser::ConfigurationParser() {}
 
 ConfigurationParser::~ConfigurationParser() {}
 
-std::map<std::string, Server> ConfigurationParser::parse() {
+std::map<std::string, Server> ConfigurationParser::parse(const std::string& filename) {
   std::map<std::string, Server> parsedConfigs;
   std::ifstream file(filename.c_str());
   std::string line;
@@ -40,26 +40,26 @@ std::map<std::string, Server> ConfigurationParser::parse() {
       continue; // Skip empty lines and comments
     switch (state) {
       case START:
-        if (ParsingUtils::matcher(line, "[server:"))
+        if (ParsingUtils::simpleMatcher(line, "[server:"))
         {
           state = SERVER_CONFIG;
           if (ParsingServer == true) // save the previous server configuration before starting the new one.
             parsedConfigs.insert(std::pair<std::string, Server>(currentServerConfig.getServerName(), currentServerConfig));
           ParsingServer = true;
         }
-        if (ParsingUtils::matcher(line, "[route:"))
+        if (ParsingUtils::simpleMatcher(line, "[route:"))
         {
           state = ROUTE_CONFIG;
           if (ParsingRoute == true) // save the previous route configuration before starting the new one.
             currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
           ParsingRoute = true;
         }
-        break;
+        // fall through
       case SERVER_CONFIG:
-        if (ParsingUtils::matcher(line, "[route:"))
+        if (ParsingUtils::simpleMatcher(line, "[route:"))
           state = ROUTE_CONFIG;
         else {
-          if (ParsingUtils::matcher(line, "[server:"))
+          if (ParsingUtils::simpleMatcher(line, "[server:"))
             ConfigurationParser::parseServerName(line, currentServerConfig);
 
           if (ParsingUtils::matcher(line, "host"))
@@ -73,16 +73,16 @@ std::map<std::string, Server> ConfigurationParser::parse() {
 
           if (ParsingUtils::matcher(line, "client_max_body_size"))
             ConfigurationParser::parseClientMaxBodySize(line, currentServerConfig);
-        }
-        break;
+        } // fall through
       case ROUTE_CONFIG:
-        if (ParsingUtils::matcher(line, "[server:"))
+        if (ParsingUtils::simpleMatcher(line, "[server:"))
         {
           state = SERVER_CONFIG; // save the route to the current server before switching to a new server.
           currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
         }
-        if (ParsingUtils::matcher(line, "[route:"))
+        if (ParsingUtils::simpleMatcher(line, "[route:"))
         {
+          ConfigurationParser::parseRoute(line, currentRouteConfig);
           currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig); // save the route to the current server before switching to a new route.
           state = ROUTE_CONFIG;
         }
@@ -111,42 +111,44 @@ std::map<std::string, Server> ConfigurationParser::parse() {
         if (ParsingUtils::matcher(line, "upload_location"))
           ConfigurationParser::parseUploadLocation(line, currentRouteConfig);
     }
-        break;
+        continue;
   }
   return parsedConfigs;
 }
 
 // Parse server Config
 void ConfigurationParser::parseHost(std::string& line, Server& serverConfig) {
-	std::istringstream iss(line);
-	std::string host;
-	iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-	getline(iss, host);  // Read the rest into value
-	if (host.empty()) {
-		throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
-	}
+  std::istringstream iss(line);
+  std::string host;
+  iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+  getline(iss, host);  // Read the rest into value
+  if (host.empty()) {
+    throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
+  }
   ParsingUtils::trimAndLower(host);
-	if (ParsingUtils::isValidIPv4(host) == false)
-		throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
-	serverConfig.setHost(host);
+  if (ParsingUtils::isValidIPv4(host) == false)
+    throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
+  Logger::log(INFO, "Host: " + host);
+  serverConfig.setHost(host);
 }
 
 void ConfigurationParser::parsePort(std::string& line, Server& serverConfig) {
-	std::istringstream iss(line);
-	std::string portStr;
-	iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-	getline(iss, portStr);
-	if (portStr.empty())
-		throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
-	std::istringstream iss2(portStr);
-	int port;
+  std::istringstream iss(line);
+  std::string portStr;
+  iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
+  getline(iss, portStr);
+  if (portStr.empty())
+    throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
+  std::istringstream iss2(portStr);
+  int port;
   ParsingUtils::trimAndLower(portStr);
   if (ParsingUtils::containsAlpha(portStr))
     throw ConfigurationParser::InvalidConfigurationException("Port cannot contain alpha characters");
-	iss2 >> port;
-	if (port < 1 || port > 65535)
-		throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
-	serverConfig.setPort(port);
+  iss2 >> port;
+  if (port < 1 || port > 65535)
+    throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
+  Logger::log(INFO, "Port: " + portStr);
+  serverConfig.setPort(port);
 }
 
 void ConfigurationParser::parseServerName(std::string &line, Server& serverConfig) 
@@ -163,6 +165,7 @@ void ConfigurationParser::parseServerName(std::string &line, Server& serverConfi
 	// Validate the server name according to the rules
 	if (serverName.length() > 253 || serverName.find("..") != std::string::npos)
     throw::ConfigurationParser::InvalidConfigurationException("Invalid server name: " + serverName);
+  Logger::log(INFO, "Server name: " + serverName);
 	serverConfig.setServerName(serverName);
 }
 
@@ -198,7 +201,6 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
 	tokens.pop_back(); // Remove the path from the list of tokens
 
 	if (!ParsingUtils::doesPathExist(path)) {
-    std::cout << "----------------PATH:" << path << std::endl;
 		Logger::log(WARNING, "error_page path does not exist or is not readable, reverting to default.");
 		return;
 	}
@@ -225,6 +227,7 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
 			Logger::log(WARNING, "Invalid error_page code: " + codeStr);
 			continue;
 		}
+    Logger::log(INFO, "Error code: " + codeStr + " Error path: " + path);
 		serverConfig.setErrorPage(errorCode, path);
 	}
 	serverConfig.hasCustomErrorPage(true);
@@ -283,7 +286,7 @@ void ConfigurationParser::parseClientMaxBodySize(std::string& line, Server& serv
         serverConfig.setMaxClientBodySize(1000000);  // Default value
         return;
     }
-
+    Logger::log(INFO, "client_max_body_size: " + sizeStr);
     serverConfig.setMaxClientBodySize(size);
 }
 
@@ -317,6 +320,8 @@ void ConfigurationParser::parseRoute(std::string& line, Route& route) {
       Logger::log(WARNING, "route name must start with a '/', prefixed " + routeName + " with a '/'");
       ParsingUtils::setPrefixString(routeName, "/");
     };
+    // ParsingUtils::trim(routeName);
+    Logger::log(INFO, "Route name: " + routeName);
     route.setRoutePath(routeName);
 }
 
@@ -341,7 +346,10 @@ void ConfigurationParser::parseMethods(std::string& line, Route& route) {
         route.setPostMethod(true);
       }
       else
+      {
+        Logger::log(ERROR, "Invalid method: " + method);
         throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
+      }
     }
 }
 
@@ -366,6 +374,7 @@ void ConfigurationParser::parseRedirect(std::string& line, Route& route) {
 	    Logger::log(WARNING, "redirect must start with a '/', prefixed " + redirect + " with a '/'"); 
 	    ParsingUtils::setPrefixString(redirect, "/");
     }
+    Logger::log(INFO, "Redirect: " + redirect + " for route " + route.getRoutePath());
     route.setRedirectLocation(redirect);
     route.setRedirect(true);
 }
@@ -395,6 +404,7 @@ void ConfigurationParser::parseRoot(std::string& line, Route& route) {
 	    Logger::log(WARNING, "root path does not have write permissions: " + root + " reverting to default root.");
 	    root = "/var/www/webserver/"; // Default compiled-in path
     }
+    Logger::log(INFO, "Root: " + root + " for route " + route.getRoutePath());
     route.setRootDirectoryPath(root);
 }
 
@@ -417,7 +427,7 @@ void ConfigurationParser::parseDirectoryListing(std::string& line, Route& route)
 	Logger::log(INFO, "directory_listing is off for route " + route.getRoutePath());
 	route.setDirectoryListing(false);
     } else {
-	Logger::log(WARNING, "Invalid directory_listing value: " + listing + ", reverting to default (false).");
+	Logger::log(WARNING, "Invalid directory_listing value: " + listing + ", reverting to default (false) for route " + route.getRoutePath() + ".");
 	route.setDirectoryListing(false);
     }
 }
@@ -442,6 +452,7 @@ void ConfigurationParser::parseDefaultFile(std::string& line, Route& route) {
 	Logger::log(WARNING, "default_file must start with a '/', prefixed " + file + " with a '/'"); 
 	ParsingUtils::setPrefixString(file, "/");
     }
+    Logger::log(INFO, "Default file: " + file + " for route " + route.getRoutePath());
     route.setDefaultFile(file);
 }
 
@@ -476,6 +487,7 @@ void ConfigurationParser::parseCgiExtensions(std::string& line, Route& route) {
 	}
 	extensionsList.push_back(extension);
     }
+    Logger::log(INFO, "CGI extensions: " + extensions + " for route " + route.getRoutePath());
     route.setCgiExtensions(extensionsList);
 }
 
@@ -514,6 +526,7 @@ void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
     return;
   }
   if (ParsingUtils::controlCharacters(location)) {
+    Logger::log(ERROR, "Control characters found in upload_location: " + location + ", reverting to default.");
     throw ConfigurationParser::InvalidConfigurationException("Control characters found in upload_location: " + location);
   }
   ParsingUtils::trimAndLower(location);
@@ -521,6 +534,7 @@ void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
     Logger::log(WARNING, "upload_location must start with a '/', prefixed " + location + " with a '/'"); 
     ParsingUtils::setPrefixString(location, "/");
   }
+  Logger::log(INFO, "Upload location: " + location + " for route " + route.getRoutePath());
   route.setUploadLocation(location);
 }
 

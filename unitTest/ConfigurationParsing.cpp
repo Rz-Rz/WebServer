@@ -111,6 +111,12 @@ Test(configuration_parser, parse_route_invalid_characters) {
         );
 }
 
+Test(configuration_parser, parse_route_just_slash) {
+    Route route;
+    std::string line = "[route:/]";
+    ConfigurationParser::parseRoute(line, route);
+    cr_assert_str_eq(route.getRoutePath().c_str(), "/", "Route path should handle extra one slash character");
+}
 
 // ------------------------------------- Methods ------------------------------------
 Test(ConfigurationParser, ParseMethods_ValidGetMethod) {
@@ -985,6 +991,15 @@ Test(ParsingUtils, matcher_with_non_alphanumeric_delimiters) {
     std::string str = "An example; test= works well.";
     std::string toFind = "test";
     cr_assert_eq(ParsingUtils::matcher(str, toFind), true, "Should match 'test' even when delimited by non-alphanumeric characters like '='");
+}
+
+
+// ------------------------------------ simpleMatcher --------------------------------
+
+Test(ParsingUtils, matcher_with_actual_directives) {
+    std::string str = "[server:example.com]";
+    std::string toFind = "[server:";
+    cr_assert_eq(ParsingUtils::simpleMatcher(str, toFind), true, "Should match '[server:' in the string");
 }
 
 

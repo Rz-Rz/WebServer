@@ -10,12 +10,18 @@ LDFLAGS = -Wl,-rpath=$(HOME)/Criterion/build/src -L$(HOME)/Criterion/build/src -
 # Source files
 SOURCES = ConfigurationParsing.cpp ../src/ConfigurationParser.cpp ../src/ParsingUtils.cpp ../src/Logger.cpp ../src/Server.cpp ../src/Route.cpp
 
+SOURCES_UTILS = Utils.cpp ../src/Logger.cpp
 # Target binary name
 TARGET = crit_test
+
+UTILS = utils
 
 # Build target
 $(TARGET): $(SOURCES)
 	$(CXX) -o $(TARGET) $(SOURCES) $(CXXFLAGS) $(LDFLAGS)
+
+$(UTILS): $(SOURCES_UTILS)
+	$(CXX) -o $(UTILS) $(SOURCES_UTILS) $(CXXFLAGS) $(LDFLAGS)
 
 # Clean target
 clean:

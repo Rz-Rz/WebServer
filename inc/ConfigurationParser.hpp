@@ -24,9 +24,9 @@ class ConfigurationParser {
 	private:
 		std::string filename;
 	public:
-		ConfigurationParser(const std::string& filename);
+		ConfigurationParser();
 		~ConfigurationParser();
-		std::map<std::string, Server> parse();
+		static std::map<std::string, Server> parse(const std::string& filename);
 
 		// Server Parsing
 		static void parseHost(std::string& line, Server& serverConfig);

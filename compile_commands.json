@@ -43,6 +43,23 @@
       "-Iinc",
       "-c",
       "-o",
+      "src/ErrorPageManager.o",
+      "src/ErrorPageManager.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/ErrorPageManager.cpp",
+    "output": "/home/afterburner/42/WebServer/src/ErrorPageManager.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
       "src/Logger.o",
       "src/Logger.cpp"
     ],
@@ -60,12 +77,63 @@
       "-Iinc",
       "-c",
       "-o",
+      "src/ParsingUtils.o",
+      "src/ParsingUtils.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/ParsingUtils.cpp",
+    "output": "/home/afterburner/42/WebServer/src/ParsingUtils.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
       "src/Reactor.o",
       "src/Reactor.cpp"
     ],
     "directory": "/home/afterburner/42/WebServer",
     "file": "/home/afterburner/42/WebServer/src/Reactor.cpp",
     "output": "/home/afterburner/42/WebServer/src/Reactor.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
+      "src/Route.o",
+      "src/Route.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/Route.cpp",
+    "output": "/home/afterburner/42/WebServer/src/Route.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-Iinc",
+      "-c",
+      "-o",
+      "src/Server.o",
+      "src/Server.cpp"
+    ],
+    "directory": "/home/afterburner/42/WebServer",
+    "file": "/home/afterburner/42/WebServer/src/Server.cpp",
+    "output": "/home/afterburner/42/WebServer/src/Server.o"
   },
   {
     "arguments": [

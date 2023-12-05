@@ -18,6 +18,7 @@ class Server {
 
 		std::string getHost() const;
 		int getPort() const;
+    std::string getPortString() const;
 		std::string getServerName() const;
 		std::string getErrorPage(int errorCode) const;
 		bool hasCustomErrorPage(void) const;

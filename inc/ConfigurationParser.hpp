@@ -14,12 +14,6 @@
 #include "Route.hpp"
 #include "Server.hpp"
 
-enum ParserState {
-    START,
-    SERVER_CONFIG,
-    ROUTE_CONFIG,
-};
-
 class ConfigurationParser {
 	private:
 		std::string filename;
@@ -29,6 +23,7 @@ class ConfigurationParser {
 		static std::map<std::string, Server> parse(const std::string& filename);
 
 		// Server Parsing
+    static void parseServerConfig(std::string& line, Server& serverConfig);
 		static void parseHost(std::string& line, Server& serverConfig);
 		static void parsePort(std::string& line, Server& serverConfig);
 		static void parseServerName(std::string &line, Server& serverConfig);
@@ -36,6 +31,7 @@ class ConfigurationParser {
 		static void parseClientMaxBodySize(std::string& line, Server& serverConfig);
 
 		// Route Parsing
+    static void parseRouteConfig(std::string& line, Route& routeConfig);
 		static void parseRoute(std::string& line, Route& route);
 		static void parseMethods(std::string& line, Route& route);
 		static void parseRedirect(std::string& line, Route& route);

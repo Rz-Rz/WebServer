@@ -5,55 +5,79 @@
 #include <unistd.h>
 #include "Reactor.hpp"
 #include "AcceptHandler.hpp"
+#include "Logger.hpp"
 #include <cerrno>
 #include "ConfigurationParser.hpp"
 
 
-
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
-    return 1;
-  }
-  else {
-    std::map<std::string, Server> servers;
-    servers = ConfigurationParser::parse(argv[1]);
-  }
-	// int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-	// if (listen_fd == -1) {
-	// 	std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
-	// 	return 1;
-	// }
-	//
-	// sockaddr_in serv_addr = {};
-	// serv_addr.sin_family = AF_INET;
-	// serv_addr.sin_port = htons(8080);
-	// serv_addr.sin_addr.s_addr = INADDR_ANY;
-	//
-	// if (bind(listen_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1) {
-	// 	std::cerr << "Error binding socket: " << strerror(errno) << std::endl;
-	// 	close(listen_fd);
-	// 	return 1;
-	// }
-	//
-	// if (listen(listen_fd, 10) == -1) {
-	// 	std::cerr << "Error listening on socket: " << strerror(errno) << std::endl;
-	// 	close(listen_fd);
-	// 	return 1;
-	// }
-	//
-	// try {
-	// 	Reactor reactor;
-	// 	AcceptHandler acceptHandler(listen_fd);
-	// 	reactor.register_handler(&acceptHandler);
-	// 	reactor.event_loop();
-	// } catch (const std::exception& e) {
-	// 	std::cerr << "Error: " << e.what() << std::endl;
-	// 	close(listen_fd);
-	// 	return 1;
-	// }
-	//
-	// close(listen_fd);
-	return 0;
+    Logger::log(INFO, "Server starting");
 
+    if (argc != 2) {
+        Logger::log(ERROR, "Usage error. Correct format: <executable> <config_file>");
+        std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
+        return 1;
+    }
+
+    std::map<std::string, Server> servers;
+    Reactor reactor;
+    try {
+        servers = ConfigurationParser::parse(argv[1]);
+        Logger::log(INFO, "Configuration file parsed successfully");
+    } catch (const std::exception& e) {
+        Logger::log(ERROR, "Configuration error: " + std::string(e.what()));
+        std::cerr << "Configuration error: " << e.what() << std::endl;
+        return 1;
+    }
+    std::cout << "Number of servers to process: " << servers.size() << std::endl;
+
+    for (std::map<std::string, Server>::iterator it = servers.begin(); it != servers.end(); ++it) {
+        Server& serverConfig = it->second;
+        int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (server_fd == -1) {
+            Logger::log(ERROR, "Error creating socket: " + std::string(strerror(errno)));
+            std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
+            continue; // Proceed to the next configuration
+        }
+        Logger::log(INFO, "Socket created");
+
+        sockaddr_in serv_addr = {};
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(serverConfig.getPort());
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+
+        if (bind(server_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1) {
+            Logger::log(ERROR, "Error binding socket: " + std::string(strerror(errno)));
+            std::cerr << "Error binding socket: " << strerror(errno) << std::endl;
+            close(server_fd);
+            continue; // Proceed to the next configuration
+        }
+        Logger::log(INFO, "Socket bound");
+
+        if (listen(server_fd, 10) == -1) {
+            Logger::log(ERROR, "Error listening on socket: " + std::string(strerror(errno)));
+            std::cerr << "Error listening on socket: " << strerror(errno) << std::endl;
+            close(server_fd);
+            continue; // Proceed to the next configuration
+        }
+        Logger::log(INFO, "Server listening on port " + serverConfig.getPortString());
+
+        // Create and register an AcceptHandler for this server_fd
+        AcceptHandler* handler = new AcceptHandler(server_fd, reactor); // Remember to manage memory
+        reactor.register_handler(handler);
+    }
+
+    try {
+        reactor.event_loop();
+        Logger::log(INFO, "Reactor event loop started");
+    } catch (const std::exception& e) {
+        Logger::log(ERROR, "Reactor error: " + std::string(e.what()));
+        std::cerr << "Reactor error: " << e.what() << std::endl;
+        // Clean-up code here
+        return 1;
+    }
+
+    Logger::log(INFO, "Server shutting down");
+    // Clean-up code here (e.g., closing file descriptors)
+    return 0;
 }

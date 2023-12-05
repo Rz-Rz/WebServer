@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include <sstream>
 
 Server::Server()
 {
@@ -54,6 +55,14 @@ std::string Server::getHost() const
 int Server::getPort() const
 {
 	    return this->port;
+}
+
+std::string Server::getPortString() const
+{
+  std::stringstream ss;
+  ss << this->port;
+  std::string portString = ss.str();
+  return portString;
 }
 
 std::string Server::getServerName() const

@@ -8,10 +8,12 @@
 #include "Logger.hpp"
 #include <cerrno>
 #include "ConfigurationParser.hpp"
+#include "SignalHandling.hpp"
 
 
 int main(int argc, char** argv) {
-    Logger::log(INFO, "Server starting");
+  SignalHandler::getInstance().setupSignalHandlers();
+  Logger::log(INFO, "Server starting");
 
     if (argc != 2) {
         Logger::log(ERROR, "Usage error. Correct format: <executable> <config_file>");
@@ -63,7 +65,7 @@ int main(int argc, char** argv) {
         Logger::log(INFO, "Server listening on port " + serverConfig.getPortString());
 
         // Create and register an AcceptHandler for this server_fd
-        AcceptHandler* handler = new AcceptHandler(server_fd, reactor); // Remember to manage memory
+        AcceptHandler* handler = new AcceptHandler(server_fd, reactor, serverConfig); // Remember to manage memory
         reactor.register_handler(handler);
     }
 

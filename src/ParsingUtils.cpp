@@ -4,6 +4,8 @@
 #include <locale>
 #include <sys/stat.h>
 #include <arpa/inet.h>
+#include <fstream>
+#include <iostream>
 
 ParsingUtils::ParsingUtils() {}
 
@@ -115,6 +117,10 @@ bool ParsingUtils::hasWritePermissions(const std::string& path) {
 	return false;
 }
 
+bool ParsingUtils::doesPathExistAndReadable(const std::string& path) {
+  return doesPathExist(path) && hasReadPermissions(path);
+}
+
 bool ParsingUtils::isValidIPv4(const std::string& host) {
     struct sockaddr_in sa;
     int result = inet_pton(AF_INET, host.c_str(), &(sa.sin_addr));
@@ -158,3 +164,20 @@ bool ParsingUtils::containsAlpha(std::string& str) {
   }
   return false;
 }
+
+std::string ParsingUtils::readFile(const std::string& filePath) {
+    std::ifstream fileStream(filePath.c_str(), std::ios::in | std::ios::binary);
+
+    if (!fileStream) {
+        // Handle the error, could throw an exception or return an error message
+        std::cerr << "Error opening file: " << filePath << std::endl;
+        return "";
+    }
+
+    // Read the entire file content
+    std::string content((std::istreambuf_iterator<char>(fileStream)), std::istreambuf_iterator<char>());
+
+    fileStream.close();
+    return content;
+}
+

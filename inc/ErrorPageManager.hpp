@@ -12,7 +12,7 @@ class ErrorPageManager {
 		std::string getErrorPage(int errorCode) const;
 		std::string getDefaultErrorPage() const;
 		std::string errorCodeMessageParser(int errorCode) const;
-		std::string generateErrorPage(int errorCode, const std::string& errorMessage);
+		std::string generateErrorPage(int errorCode, const std::string& errorMessage) const;
 
 
 private:

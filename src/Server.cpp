@@ -8,6 +8,7 @@ Server::Server()
       this->serverName = "";
       this->customErrorPage = false;
       this->maxClientBodySize = 0;
+      this->errorPageManager = ErrorPageManager();
 }
 
 // Setters
@@ -29,6 +30,7 @@ void Server::setServerName(const std::string& name)
 void Server::setErrorPage(int errorCode, const std::string& pagePath)
 {
 	    this->errorPages[errorCode] = pagePath;
+      this->errorPageManager.setErrorPage(errorCode, pagePath);
 }
 
 void Server::hasCustomErrorPage(bool value)
@@ -93,4 +95,9 @@ long long Server::getMaxClientBodySize() const
 Route Server::getRoute(const std::string& path) const
 {
 	    return this->routes.at(path);
+}
+
+ErrorPageManager Server::getErrorPageManager() const
+{
+  return this->errorPageManager;
 }

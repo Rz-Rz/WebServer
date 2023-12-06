@@ -42,7 +42,6 @@ class ConfigurationParser {
 		static void parseAllowFileUpload(std::string& line, Route& route);
 		static void parseUploadLocation(std::string& line, Route& route);
 
-
 		// Exception
 		class InvalidConfigurationException : public std::exception {
 			public:

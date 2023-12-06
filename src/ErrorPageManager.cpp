@@ -4,7 +4,7 @@
 #include <sstream>
 
 ErrorPageManager::ErrorPageManager() {
-	defaultErrorPage = 
+defaultErrorPage = 
 		"<!DOCTYPE html>\n"
 		"<html>\n"
 		"<head>\n"
@@ -26,7 +26,7 @@ std::string ErrorPageManager::getErrorPage(int errorCode) const {
 	if (it != customErrorPages.end()) {
 		return it->second;
 	}
-	return getDefaultErrorPage();
+	return generateErrorPage(errorCode, errorCodeMessageParser(errorCode));
 }
 
 std::string ErrorPageManager::errorCodeMessageParser(int errorCode) const {
@@ -76,7 +76,7 @@ std::string ErrorPageManager::errorCodeMessageParser(int errorCode) const {
 	return errorMessage;
 }
 
-std::string ErrorPageManager::generateErrorPage(int errorCode, const std::string& message) {
+std::string ErrorPageManager::generateErrorPage(int errorCode, const std::string& message) const {
     std::string page = getDefaultErrorPage();
     std::ostringstream errorCodeStr;
     errorCodeStr << errorCode;
@@ -85,12 +85,10 @@ std::string ErrorPageManager::generateErrorPage(int errorCode, const std::string
     if (pos != std::string::npos) {
         page.replace(pos, std::string("[ERROR_CODE]").length(), errorCodeStr.str());
     }
-
     pos = page.find("[ERROR_MESSAGE]");
     if (pos != std::string::npos) {
         page.replace(pos, std::string("[ERROR_MESSAGE]").length(), message);
     }
-
     return page;
 }
 
@@ -98,4 +96,3 @@ std::string ErrorPageManager::generateErrorPage(int errorCode, const std::string
 std::string ErrorPageManager::getDefaultErrorPage() const {
     return defaultErrorPage;
 }
-

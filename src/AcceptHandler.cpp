@@ -10,7 +10,7 @@
 #include <cerrno>
 #include "Reactor.hpp"
 
-AcceptHandler::AcceptHandler(int fd, Reactor &reactor) : listen_fd(fd), reactor(reactor) {}
+AcceptHandler::AcceptHandler(int fd, Reactor &reactor, Server &server) : listen_fd(fd), reactor(reactor), server(server) {}
 
 void AcceptHandler::handle_event(uint32_t /*events*/) {
   std::cout << "AcceptHandler::handle_event" << std::endl;
@@ -24,7 +24,7 @@ void AcceptHandler::handle_event(uint32_t /*events*/) {
   {
     std::cout << "Accepting a connection" << std::endl;
     // Create and register a RequestHandler for this client_fd
-    EventHandler* handler = new RequestHandler(client_fd); // Remember to manage memory
+    EventHandler* handler = new RequestHandler(client_fd, server); // Remember to manage memory
     reactor.register_handler(handler);
   }
 }

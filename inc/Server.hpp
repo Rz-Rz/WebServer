@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include "Route.hpp"  // Assume this is the header file for your Route class
+#include "ErrorPageManager.hpp"
 
 class Server {
 	public:
@@ -24,9 +25,11 @@ class Server {
 		bool hasCustomErrorPage(void) const;
 		long long getMaxClientBodySize() const;
 		Route getRoute(const std::string& path) const;
+    ErrorPageManager getErrorPageManager() const;
 
 	private:
 		std::string host;
+    ErrorPageManager errorPageManager;
 		int port;
 		std::string serverName;
 		std::map<int, std::string> errorPages;

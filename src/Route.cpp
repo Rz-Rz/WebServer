@@ -9,6 +9,7 @@ Route::Route()
     this->directoryListing = false;
     this->has_CGI = false;
     this->allowFileUpload = false;
+    this->rootDirectoryPath = "/var/www/webserver/";
 }
 
 // Setters

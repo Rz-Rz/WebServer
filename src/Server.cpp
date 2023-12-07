@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include <sstream>
+#include <iostream>
 
 Server::Server()
 {
@@ -100,4 +101,12 @@ Route Server::getRoute(const std::string& path) const
 ErrorPageManager Server::getErrorPageManager() const
 {
   return this->errorPageManager;
+}
+
+//debug 
+void Server::printRoutes() const
+{
+  for (std::map<std::string, Route>::const_iterator it = this->routes.begin(); it != this->routes.end(); ++it) {
+    std::cout << "Route: " << it->first << std::endl;
+  }
 }

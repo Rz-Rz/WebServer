@@ -27,6 +27,9 @@ class Server {
 		Route getRoute(const std::string& path) const;
     ErrorPageManager getErrorPageManager() const;
 
+    //debug
+    void printRoutes() const;
+
 	private:
 		std::string host;
     ErrorPageManager errorPageManager;

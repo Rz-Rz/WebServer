@@ -20,7 +20,6 @@ void HTTPRequestParser::appendData(const std::string& data) {
       if (parseRequestLine(requestData.substr(0, lineEnd))) {
         requestLineParsed = true;
         requestData.erase(0, lineEnd + 2);
-        std::cout << "Hello there" << std::endl;
       }
     }
   }

@@ -26,8 +26,7 @@ void RequestHandler::handle_event(uint32_t events) {
 
       // Check if the request line and headers are parsed
       if (parser.isRequestLineParsed() && parser.areHeadersParsed()) {
-        // Process the request
-        // Example: handleRequest();
+        //process the response
         RequestHandler::handleRequest(server);
       }
     }
@@ -73,36 +72,33 @@ void RequestHandler::sendErrorResponse(int errorCode) {
 }
 
 std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath) {
-    std::ostringstream html;
-
-    // Basic HTML structure
-    html << "<html><head><title>Directory Listing of " << directoryPath << "</title></head><body>";
-    html << "<h2>Directory Listing of " << directoryPath << "</h2>";
-    html << "<ul>";
-
-    // List each item in the directory
-    for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it) {
-        // Assuming directoryPath is formatted correctly (e.g., ends with '/')
-        std::string itemPath = directoryPath + *it;
-
-        // Create a list item with a link for each entry
-        html << "<li><a href=\"" << itemPath << "\">" << *it << "</a></li>";
-    }
-
-    html << "</ul>";
-    html << "</body></html>";
-
-    return html.str();
+  std::ostringstream html;
+  // Basic HTML structure
+  html << "<html><head><title>Directory Listing of " << directoryPath << "</title></head><body>";
+  html << "<h2>Directory Listing of " << directoryPath << "</h2>";
+  html << "<ul>";
+  // List each item in the directory
+  for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it) {
+    // Assuming directoryPath is formatted correctly (e.g., ends with '/')
+    std::string itemPath = directoryPath + *it;
+    // Create a list item with a link for each entry
+    html << "<li><a href=\"" << itemPath << "\">" << *it << "</a></li>";
+  }
+  html << "</ul>";
+  html << "</body></html>";
+  return html.str();
 }
 
 void RequestHandler::handleRequest(const Server& server) {
   Route route;
+  server.printRoutes();
   if (parser.getMethod() == "GET") {
     try {
       route = server.getRoute(parser.getUri());
     } catch (const std::out_of_range& e) {
       // No route found for this URI
       sendErrorResponse(404);
+      std::cout << "No route found for URI: " << parser.getUri() << std::endl;
       return;
     }
     if (!route.getGetMethod()) {
@@ -115,10 +111,12 @@ void RequestHandler::handleRequest(const Server& server) {
       return;
     }
     std::string filePath = getFilePathFromUri(route, parser.getUri());
+    std::cout << "File path: " << filePath << std::endl;
     if (ParsingUtils::doesPathExistAndReadable(filePath)) {
       std::string fileContent = ParsingUtils::readFile(filePath);
       sendSuccessResponse("200 OK", "text/html", fileContent);
     } else {
+      std::cout << "File not found: " << filePath << std::endl;
       sendErrorResponse(404);
     }
   }

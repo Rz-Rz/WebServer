@@ -39,11 +39,15 @@ std::map<std::string, Server> ConfigurationParser::parse(const std::string& file
 
     if (ParsingUtils::simpleMatcher(line, "[server:")) {
       if (isParsingServer) {
+        if (isParsingRoute) {
+          // Save the previously parsed route configuration
+          currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
+          isParsingRoute = false;
+        }
         // Save the previously parsed server configuration
         parsedConfigs.insert(std::pair<std::string, Server>(currentServerConfig.getServerName(), currentServerConfig));
       }
       isParsingServer = true;
-      isParsingRoute = false;
       ConfigurationParser::parseServerName(line, currentServerConfig);
       continue;
     }
@@ -53,25 +57,22 @@ std::map<std::string, Server> ConfigurationParser::parse(const std::string& file
         // Save the previously parsed route configuration
         currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
       }
-      if (isParsingServer) {
-        parsedConfigs.insert(std::pair<std::string, Server>(currentServerConfig.getServerName(), currentServerConfig));
-      }
       isParsingRoute = true;
-      isParsingServer = false;
       ConfigurationParser::parseRoute(line, currentRouteConfig);
       continue;
     }
     if (isParsingServer)
       parseServerConfig(line, currentServerConfig);
-    else if (isParsingRoute)
+    if (isParsingRoute)
       parseRouteConfig(line, currentRouteConfig);
   }
-
-  // Finalize the last server configuration if it exists
+  // Finalize the last parsed route and server
+  if (isParsingRoute) {
+    currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
+  }
   if (isParsingServer) {
     parsedConfigs.insert(std::pair<std::string, Server>(currentServerConfig.getServerName(), currentServerConfig));
   }
-
   return parsedConfigs;
 }
 

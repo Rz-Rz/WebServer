@@ -7,6 +7,7 @@
 #include <errno.h>
 #include "Logger.hpp"
 #include "ErrorPageManager.hpp"
+#include "ParsingUtils.hpp"
 
 RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance) {}
 
@@ -45,15 +46,26 @@ int RequestHandler::get_handle() const {
 }
 
 std::string RequestHandler::getFilePathFromUri(const Route& route, const std::string& uri) {
-    std::string filePath = route.getRootDirectoryPath();
+    std::string rootPath = route.getRootDirectoryPath();
+    std::string filePath = rootPath;
 
-    // Append the URI to the root directory path
+    // Check if the root path ends with a slash and adjust accordingly
+    if (!rootPath.empty() && rootPath[rootPath.length() - 1] != '/') {
+        filePath += "/";
+    }
+
+    // Append the URI to the root directory path, omitting the leading slash in the URI
     if (!uri.empty() && uri != "/") {
-        filePath += uri;
+        if (uri[0] == '/') {
+            filePath += uri.substr(1);
+        } else {
+            filePath += uri;
+        }
     } else {
         // Use the default file if the URI is just '/'
         filePath += route.getDefaultFile();
     }
+
     return filePath;
 }
 
@@ -138,6 +150,7 @@ void RequestHandler::handleRequest(const Server& server) {
       }
       return;
     }
+    std::cout << "GET request for URI: " << parser.getUri() << std::endl;
     std::string filePath = getFilePathFromUri(route, parser.getUri());
     std::cout << "File path: " << filePath << std::endl;
     if (ParsingUtils::doesPathExistAndReadable(filePath)) {

@@ -6,6 +6,11 @@
 #include <arpa/inet.h>
 #include <fstream>
 #include <iostream>
+#include <sys/types.h>
+#include <dirent.h>
+#include "Logger.hpp"
+#include <string.h>
+
 
 ParsingUtils::ParsingUtils() {}
 
@@ -181,3 +186,22 @@ std::string ParsingUtils::readFile(const std::string& filePath) {
     return content;
 }
 
+std::vector<std::string> ParsingUtils::getDirectoryContents(const std::string& directoryPath) {
+    std::vector<std::string> contents;
+    DIR *dir = opendir(directoryPath.c_str()); // Open the directory
+    if (dir != NULL) {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) { // Read each entry
+            std::string fileName = entry->d_name;
+            // Optionally, filter out '.' and '..'
+            if (fileName != "." && fileName != "..") {
+                contents.push_back(fileName);
+            }
+        }
+        closedir(dir); // Close the directory
+    } else {
+      Logger::log(ERROR, "Error opening directory: " + std::string(strerror(errno)));
+      throw std::runtime_error("Error opening directory: " + std::string(strerror(errno)));
+    }
+    return contents;
+}

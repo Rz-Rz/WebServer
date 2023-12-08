@@ -23,7 +23,6 @@ void RequestHandler::handle_event(uint32_t events) {
       // Append data to the parser
       parser.appendData(std::string(buffer, bytes_read));
       std::cout << "Received " << bytes_read << " bytes from client" << std::endl;
-
       // Check if the request line and headers are parsed
       if (parser.isRequestLineParsed() && parser.areHeadersParsed()) {
         //process the response
@@ -98,16 +97,45 @@ void RequestHandler::handleRequest(const Server& server) {
     } catch (const std::out_of_range& e) {
       // No route found for this URI
       sendErrorResponse(404);
-      std::cout << "No route found for URI: " << parser.getUri() << std::endl;
+      Logger::log(ERROR, "No route found for URI: " + parser.getUri());
       return;
     }
     if (!route.getGetMethod()) {
       // Method not allowed for this route
       sendErrorResponse(405);
+      Logger::log(ERROR, "Method not allowed for URI: " + parser.getUri());
       return;
     }
     if (route.getRedirect()) {
       sendRedirectResponse(route.getRedirectLocation());
+      Logger::log(INFO, "Redirecting to: " + route.getRedirectLocation());
+      return;
+    }
+    if (route.getDirectoryListing() && !route.getHasDefaultFile()) {
+      std::string directoryPath = getFilePathFromUri(route, parser.getUri());
+      if (ParsingUtils::doesPathExist(directoryPath)) {
+        if (ParsingUtils::hasReadPermissions(directoryPath)) {
+          // Directory exists and is readable
+          Logger::log(INFO, "Directory listing on GET request: " + directoryPath);
+          std::vector<std::string> contents;
+          try {
+            contents = ParsingUtils::getDirectoryContents(directoryPath);
+          } catch (const std::exception& e) {
+            Logger::log(ERROR, "Error reading directory contents: " + std::string(e.what()));
+            sendErrorResponse(500);
+            return;
+          }
+          std::string directoryListingPage = generateDirectoryListingPage(contents, parser.getUri());
+          sendSuccessResponse("200 OK", "text/html", directoryListingPage);
+          return;
+        }
+        else {
+          // Directory exists but is not readable
+          Logger::log(ERROR, "Directory not readable: " + directoryPath);
+          sendErrorResponse(403);
+          return;
+        }
+      }
       return;
     }
     std::string filePath = getFilePathFromUri(route, parser.getUri());

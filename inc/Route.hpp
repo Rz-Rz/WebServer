@@ -21,6 +21,7 @@ public:
     void setCgiExtensions(const std::vector<std::string>& extensions);
     void setAllowFileUpload(bool allow);
     void setUploadLocation(const std::string& location);
+    void setHasDefaultFile(bool value);
 
     std::string getRoutePath() const;
     bool getGetMethod() const;
@@ -34,6 +35,7 @@ public:
     std::vector<std::string> getCgiExtensions() const;
     bool getAllowFileUpload() const;
     std::string getUploadLocation() const;
+    bool getHasDefaultFile() const;
 
 private:
     std::string routePath;
@@ -44,6 +46,7 @@ private:
     std::string rootDirectoryPath;
     bool directoryListing;
     std::string defaultFile;
+    bool hasDefaultFile;
     bool has_CGI;
     std::vector<std::string> cgiExtensions;
     bool allowFileUpload;

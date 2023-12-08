@@ -9,10 +9,16 @@ Route::Route()
     this->directoryListing = false;
     this->has_CGI = false;
     this->allowFileUpload = false;
+    this->hasDefaultFile = false;
     this->rootDirectoryPath = "/var/www/webserver/";
 }
 
 // Setters
+void Route::setHasDefaultFile(bool value)
+{
+    this->hasDefaultFile = value;
+}
+
 void Route::setRoutePath(const std::string& path)
 {
     this->routePath = path;
@@ -132,4 +138,9 @@ bool Route::getAllowFileUpload() const
 std::string Route::getUploadLocation() const
 {
     return this->uploadLocation;
+}
+
+bool Route::getHasDefaultFile() const
+{
+    return this->hasDefaultFile;
 }

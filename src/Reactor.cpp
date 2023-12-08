@@ -4,6 +4,7 @@
 #include <string.h>
 #include <cerrno>
 #include <unistd.h>
+#include <fcntl.h>
 
 
 
@@ -20,8 +21,16 @@ Reactor::~Reactor() {
 
 void Reactor::register_handler(EventHandler* eh) {
 	int fd = eh->get_handle();
+
+  int flags = fcntl(fd, F_GETFL, 0);
+  if (flags == -1)
+    throw std::runtime_error("Error getting file descriptor flags: " + std::string(strerror(errno)));
+  flags |= O_NONBLOCK;
+  if (fcntl(fd, F_SETFL, flags) == -1)
+    throw std::runtime_error("Error setting non-blocking mode: " + std::string(strerror(errno)));
+
 	epoll_event event = {};
-	event.events = EPOLLIN;
+	event.events = EPOLLIN | EPOLLOUT;
 	event.data.ptr = eh;
 	if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event) == -1) {
 		throw std::runtime_error("Error adding epoll event" + std::string(strerror(errno)));

@@ -434,6 +434,7 @@ void ConfigurationParser::parseDirectoryListing(std::string& line, Route& route)
 }
 
 void ConfigurationParser::parseDefaultFile(std::string& line, Route& route) {
+  std::cout << "HEEEEEEEEEEEEEEEEEEREEEEEEEEEEEEEEEEEEEEEEEEE" << std::endl;
   std::istringstream iss(line);
   std::string file;
   iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  

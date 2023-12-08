@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include <sstream>
 #include <iostream>
+#include "RouteDebug.hpp"
 
 Server::Server()
 {
@@ -108,5 +109,6 @@ void Server::printRoutes() const
 {
   for (std::map<std::string, Route>::const_iterator it = this->routes.begin(); it != this->routes.end(); ++it) {
     std::cout << "Route: " << it->first << std::endl;
+    RouteDebug::printRouteInfo(it->second);
   }
 }

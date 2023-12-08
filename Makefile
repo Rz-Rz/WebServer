@@ -3,7 +3,7 @@ CXX = c++
 GXX = g++
 
 # Compiler flags
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinc
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinc -g3
 
 # Test sources and objects
 TEST_OBJECTS = $(TEST_SOURCES:.cpp=.o)

@@ -8,6 +8,7 @@
 #include "Logger.hpp"
 #include "ErrorPageManager.hpp"
 #include "ParsingUtils.hpp"
+#include <cstdlib>
 
 RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance) {}
 
@@ -82,7 +83,7 @@ void RequestHandler::sendErrorResponse(int errorCode) {
   write(client_fd, response.c_str(), response.size());
 }
 
-std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath) {
+std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath) {
   std::ostringstream html;
   // Basic HTML structure
   html << "<html><head><title>Directory Listing of " << directoryPath << "</title></head><body>";
@@ -100,68 +101,173 @@ std::string generateDirectoryListingPage(const std::vector<std::string>& content
   return html.str();
 }
 
+void RequestHandler::handleRedirect(const Route& route) {
+  sendRedirectResponse(route.getRedirectLocation());
+  Logger::log(INFO, "Redirecting to: " + route.getRedirectLocation());
+}
+
+void RequestHandler::handleDirectoryRequest(const Route& route)
+{
+      std::string directoryPath = getFilePathFromUri(route, parser.getUri());
+      if (!ParsingUtils::doesPathExist(directoryPath)) {
+        Logger::log(ERROR, "Directory does not exist: " + directoryPath);
+        sendErrorResponse(403);
+        return;
+      }
+      if (!ParsingUtils::hasReadPermissions(directoryPath)) {
+        Logger::log(ERROR, "Directory is not readable: " + directoryPath);
+        sendErrorResponse(403);
+        return;
+      }
+      // Directory exists and is readable
+      Logger::log(INFO, "Directory listing on GET request: " + directoryPath);
+      std::vector<std::string> contents;
+      try {
+        contents = ParsingUtils::getDirectoryContents(directoryPath);
+      } catch (const std::exception& e) {
+        Logger::log(ERROR, "500 - Error reading directory contents: " + std::string(e.what()));
+        sendErrorResponse(500);
+        return;
+      }
+      std::string directoryListingPage = generateDirectoryListingPage(contents, parser.getUri());
+      sendSuccessResponse("200 OK", "text/html", directoryListingPage);
+      return;
+}
+
+void RequestHandler::handleFileRequest(const Route& route) {
+  std::string filePath = getFilePathFromUri(route, parser.getUri());
+  if (ParsingUtils::isDirectory(filePath))
+  {
+    sendErrorResponse(403);
+    Logger::log(ERROR, "403 - Directory listing is not enabled: " + filePath);
+    return;
+  }
+  if (ParsingUtils::doesPathExistAndReadable(filePath)) {
+    std::string fileContent = ParsingUtils::readFile(filePath);
+    sendSuccessResponse("200 OK", "text/html", fileContent);
+    return;
+  } else {
+    sendErrorResponse(404);
+    Logger::log(ERROR, "404 - File not found: " + filePath);
+    return;
+  }
+}
+
+
+void RequestHandler::handleGetRequest(const Server& server) {
+  Route route;
+  try {
+    route = server.getRoute(parser.getUri());
+  } catch (const std::out_of_range& e) {
+    // No route found for this URI
+    sendErrorResponse(404);
+    Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
+    return;
+  }
+  if (!route.getGetMethod()) {
+    // Method not allowed for this route
+    sendErrorResponse(405);
+    Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
+    return;
+  }
+  if (route.getRedirect()) {
+    handleRedirect(route);
+    return;
+  }
+  else if (route.getDirectoryListing() && !route.getHasDefaultFile()) {
+    handleDirectoryRequest(route);
+    return;
+  }
+  else {
+    handleFileRequest(route);
+    return;
+  }
+}
+
+bool RequestHandler::isPayloadTooLarge(void) {
+    std::string contentLengthHeader = parser.getHeader("Content-Length");
+    long long contentLength = 0;
+    if (!contentLengthHeader.empty()) {
+        contentLength = std::atoll(contentLengthHeader.c_str());
+        if (contentLength > server.getMaxClientBodySize()) {
+            sendErrorResponse(413);
+            Logger::log(ERROR, "413 - Payload too large: " + contentLengthHeader);
+            return true; // Payload is too large
+        }
+    }
+    return false; // Payload is within the acceptable size
+}
+
+std::string RequestHandler::extractFilename(const HTTPRequestParser& parser) {
+    std::string uri = parser.getUri();
+    size_t lastSlashPos = uri.find_last_of('/');
+    if (lastSlashPos != std::string::npos) {
+        return uri.substr(lastSlashPos + 1);
+    }
+    return "";
+}
+
+void RequestHandler::handleFileUpload(const Route& route) {
+  std::string filePath = getFilePathFromUri(route, parser.getUri());
+  std::cout << "File path: " << filePath << std::endl;
+  if (!ParsingUtils::doesPathExist(filePath)) {
+    Logger::log(ERROR, "Directory does not exist: " + filePath);
+    sendErrorResponse(403);
+    return;
+  }
+  if (!ParsingUtils::hasWritePermissions(filePath)) {
+    Logger::log(ERROR, "Directory is not writable: " + filePath);
+    sendErrorResponse(403);
+    return;
+  }
+  if (isPayloadTooLarge()) {
+    return;
+  }
+  // Directory exists and is writable
+  Logger::log(INFO, "File upload on POST request: " + filePath);
+  std::string fileContent = parser.getBody();
+  std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
+  if (!fileStream) {
+    Logger::log(ERROR, "500 - Error opening file for writing: " + filePath);
+    sendErrorResponse(500);
+    return;
+  }
+  fileStream << fileContent;
+  fileStream.close();
+  sendSuccessResponse("200 OK", "text/html", "File uploaded successfully");
+  return;
+}
+
+void RequestHandler::handlePostRequest(const Server& server) {
+  Route route;
+  try {
+    route = server.getRoute(parser.getUri());
+  } catch (const std::out_of_range& e) {
+    sendErrorResponse(404);
+    Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
+    return;
+  }
+
+  if (!route.getPostMethod()) {
+    sendErrorResponse(405);
+    Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
+    return;
+  }
+
+  if (route.getAllowFileUpload()) {
+    handleFileUpload(route);
+  }
+}
+
 void RequestHandler::handleRequest(const Server& server) {
   Route route;
   server.printRoutes();
   if (parser.getMethod() == "GET") {
-    try {
-      route = server.getRoute(parser.getUri());
-    } catch (const std::out_of_range& e) {
-      // No route found for this URI
-      sendErrorResponse(404);
-      Logger::log(ERROR, "No route found for URI: " + parser.getUri());
-      return;
-    }
-    if (!route.getGetMethod()) {
-      // Method not allowed for this route
-      sendErrorResponse(405);
-      Logger::log(ERROR, "Method not allowed for URI: " + parser.getUri());
-      return;
-    }
-    if (route.getRedirect()) {
-      sendRedirectResponse(route.getRedirectLocation());
-      Logger::log(INFO, "Redirecting to: " + route.getRedirectLocation());
-      return;
-    }
-    if (route.getDirectoryListing() && !route.getHasDefaultFile()) {
-      std::string directoryPath = getFilePathFromUri(route, parser.getUri());
-      if (ParsingUtils::doesPathExist(directoryPath)) {
-        if (ParsingUtils::hasReadPermissions(directoryPath)) {
-          // Directory exists and is readable
-          Logger::log(INFO, "Directory listing on GET request: " + directoryPath);
-          std::vector<std::string> contents;
-          try {
-            contents = ParsingUtils::getDirectoryContents(directoryPath);
-          } catch (const std::exception& e) {
-            Logger::log(ERROR, "Error reading directory contents: " + std::string(e.what()));
-            sendErrorResponse(500);
-            return;
-          }
-          std::string directoryListingPage = generateDirectoryListingPage(contents, parser.getUri());
-          sendSuccessResponse("200 OK", "text/html", directoryListingPage);
-          return;
-        }
-        else {
-          // Directory exists but is not readable
-          Logger::log(ERROR, "Directory not readable: " + directoryPath);
-          sendErrorResponse(403);
-          return;
-        }
-      }
-      return;
-    }
-    std::cout << "GET request for URI: " << parser.getUri() << std::endl;
-    std::string filePath = getFilePathFromUri(route, parser.getUri());
-    std::cout << "File path: " << filePath << std::endl;
-    if (ParsingUtils::doesPathExistAndReadable(filePath)) {
-      std::string fileContent = ParsingUtils::readFile(filePath);
-      sendSuccessResponse("200 OK", "text/html", fileContent);
-    } else {
-      std::cout << "File not found: " << filePath << std::endl;
-      sendErrorResponse(404);
-    }
+    handleGetRequest(server);
   }
-  // Additional handling for other methods...
+  else if (parser.getMethod() == "POST") {
+    handlePostRequest(server);
+  }
 }
 
 void RequestHandler::sendRedirectResponse(const std::string& redirectLocation) {

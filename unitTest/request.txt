@@ -1,0 +1,33 @@
+== Info:   Trying 127.0.0.1:8080...
+== Info: Connected to 127.0.0.1 (127.0.0.1) port 8080 (#0)
+=> Send header, 192 bytes (0xc0)
+0000: POST /upload HTTP/1.1
+0017: Host: 127.0.0.1:8080
+002d: User-Agent: curl/7.81.0
+0046: Accept: */*
+0053: Content-Length: 236
+0068: Content-Type: multipart/form-data; boundary=--------------------
+00a8: ----338bda90b9b4704a
+00be: 
+=> Send data, 236 bytes (0xec)
+0000: --------------------------338bda90b9b4704a
+002c: Content-Disposition: form-data; name="file"; filename="test.txt"
+006e: Content-Type: text/plain
+0088: 
+008a: this is a text <fieldset>.  as a test.</fieldset>.
+00be: --------------------------338bda90b9b4704a--
+== Info: We are completely uploaded and fine
+== Info: Mark bundle as not supporting multiuse
+<= Recv header, 53 bytes (0x35)
+0000: HTTP/1.1 500 Internal Server Error. Error code: 500
+<= Recv header, 25 bytes (0x19)
+0000: Content-Type: text/html
+<= Recv header, 21 bytes (0x15)
+0000: Content-Length: 159
+<= Recv header, 2 bytes (0x2)
+0000: 
+<= Recv data, 159 bytes (0x9f)
+0000: <!DOCTYPE html>.<html>.<head>.    <title>Error</title>.</head>.<
+0040: body>.    <h1>Error: 500</h1>.    <p>Internal Server Error. Erro
+0080: r code: 500</p>.</body>.</html>
+== Info: Connection #0 to host 127.0.0.1 left intact

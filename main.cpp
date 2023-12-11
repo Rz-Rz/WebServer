@@ -49,6 +49,15 @@ int main(int argc, char** argv) {
         serv_addr.sin_port = htons(serverConfig.getPort());
         serv_addr.sin_addr.s_addr = INADDR_ANY;
 
+        // Allow socket reuse
+        int opt = 1;
+        // Set SO_REUSEADDR to allow local address reuse
+        if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+          // Handle setsockopt error
+          throw std::runtime_error("Error setting socket options: " + std::string(strerror(errno)));
+        }
+
+
         if (bind(server_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1) {
             Logger::log(ERROR, "Error binding socket: " + std::string(strerror(errno)));
             std::cerr << "Error binding socket: " << strerror(errno) << std::endl;

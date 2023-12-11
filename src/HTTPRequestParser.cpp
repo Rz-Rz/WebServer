@@ -71,9 +71,21 @@ std::string HTTPRequestParser::getHttpVersion() const {
   return httpVersion;
 }
 
+std::string HTTPRequestParser::getHeader(const std::string& headerName) const {
+  std::map<std::string, std::string>::const_iterator it = headers.find(headerName);
+  if (it != headers.end()) {
+    return it->second;
+  }
+  else {
+    return "";
+  }
+}
+
 std::map<std::string, std::string> HTTPRequestParser::getHeaders() const {
   return headers;
 }
+
+
 
 std::string HTTPRequestParser::getBody() const {
   return body;

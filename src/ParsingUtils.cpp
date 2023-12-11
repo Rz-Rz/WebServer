@@ -107,11 +107,18 @@ bool ParsingUtils::doesPathExist(const std::string& path) {
 }
 
 bool ParsingUtils::hasReadPermissions(const std::string& path) {
-	struct stat buffer;
-	if (stat(path.c_str(), &buffer) == 0) {
-		return (buffer.st_mode & S_IRUSR);
-	}
-	return false;
+    struct stat buffer;
+    if (stat(path.c_str(), &buffer) == 0) {
+        if (S_ISDIR(buffer.st_mode)) {
+            // Check if the path is a directory and if it has read and execute permissions
+            // Execute permission is required on a directory to list its contents
+            return (buffer.st_mode & S_IXUSR) && (buffer.st_mode & S_IRUSR);
+        } else {
+            // For regular files, just check read permission
+            return (buffer.st_mode & S_IRUSR);
+        }
+    }
+    return false;
 }
 
 bool ParsingUtils::hasWritePermissions(const std::string& path) {
@@ -124,6 +131,14 @@ bool ParsingUtils::hasWritePermissions(const std::string& path) {
 
 bool ParsingUtils::doesPathExistAndReadable(const std::string& path) {
   return doesPathExist(path) && hasReadPermissions(path);
+}
+
+bool ParsingUtils::isDirectory(const std::string& path) {
+  struct stat buffer;
+  if (stat(path.c_str(), &buffer) == 0) {
+    return S_ISDIR(buffer.st_mode);
+  }
+  return false;
 }
 
 bool ParsingUtils::isValidIPv4(const std::string& host) {

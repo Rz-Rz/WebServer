@@ -30,6 +30,7 @@ public:
     std::string getMethod() const;
     std::string getUri() const;
     std::string getHttpVersion() const;
+    std::string getHeader(const std::string& headerName) const;
     std::map<std::string, std::string> getHeaders() const;
     std::string getBody() const;
 

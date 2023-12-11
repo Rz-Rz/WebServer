@@ -42,6 +42,7 @@ std::map<std::string, Server> ConfigurationParser::parse(const std::string& file
         if (isParsingRoute) {
           // Save the previously parsed route configuration
           currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
+          currentRouteConfig = Route();
           isParsingRoute = false;
         }
         // Save the previously parsed server configuration
@@ -56,6 +57,7 @@ std::map<std::string, Server> ConfigurationParser::parse(const std::string& file
       if (isParsingRoute) {
         // Save the previously parsed route configuration
         currentServerConfig.addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
+        currentRouteConfig = Route();
       }
       isParsingRoute = true;
       ConfigurationParser::parseRoute(line, currentRouteConfig);
@@ -329,6 +331,7 @@ void ConfigurationParser::parseMethods(std::string& line, Route& route) {
   std::istringstream iss(line);
   std::string method;
   iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  // Ignore everything until the '='
+  std::cout << "line" << line << std::endl;
   while (iss >> method) {
     if (method.empty()) {
       Logger::log(WARNING, "method are empty, GET and POST will be accepted for route " + route.getRoutePath());
@@ -340,12 +343,12 @@ void ConfigurationParser::parseMethods(std::string& line, Route& route) {
       Logger::log(INFO, "GET method found for route " + route.getRoutePath());
       route.setGetMethod(true);
     }
-    else if (ParsingUtils::matcher(method, "POST"))
+    if (ParsingUtils::matcher(method, "POST"))
     {
       Logger::log(INFO, "POST method found for route " + route.getRoutePath());
       route.setPostMethod(true);
     }
-    else
+    if (!route.getGetMethod() && !route.getPostMethod())
     {
       Logger::log(ERROR, "Invalid method: " + method);
       throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
@@ -434,7 +437,6 @@ void ConfigurationParser::parseDirectoryListing(std::string& line, Route& route)
 }
 
 void ConfigurationParser::parseDefaultFile(std::string& line, Route& route) {
-  std::cout << "HEEEEEEEEEEEEEEEEEEREEEEEEEEEEEEEEEEEEEEEEEEE" << std::endl;
   std::istringstream iss(line);
   std::string file;
   iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  

@@ -11,6 +11,7 @@ Route::Route()
     this->allowFileUpload = false;
     this->hasDefaultFile = false;
     this->rootDirectoryPath = "/var/www/webserver/";
+    this->uploadLocation = "/var/www/webserver/uploads/";
 }
 
 // Setters

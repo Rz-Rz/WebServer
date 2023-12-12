@@ -33,6 +33,7 @@ public:
     std::string getHeader(const std::string& headerName) const;
     std::map<std::string, std::string> getHeaders() const;
     std::string getBody() const;
+    std::string getBoundary() const;
 
     bool isRequestLineParsed() const;
     bool areHeadersParsed() const;

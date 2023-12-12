@@ -42,6 +42,7 @@ bool HTTPRequestParser::parseHeaders() {
       ParsingUtils::trimAndLower(key);
       ParsingUtils::trim(value);
       headers[key] = value;
+      std::cout << "key: " << key << " value: " << value << std::endl;
     } else {
       Logger::log(ERROR, "Invalid header line: " + line);
       return false;
@@ -85,8 +86,6 @@ std::map<std::string, std::string> HTTPRequestParser::getHeaders() const {
   return headers;
 }
 
-
-
 std::string HTTPRequestParser::getBody() const {
   return body;
 }
@@ -104,4 +103,41 @@ void HTTPRequestParser::printHeaders() const {
   for (std::map<std::string, std::string>::const_iterator it = hdrs.begin(); it != hdrs.end(); ++it) {
     std::cout << it->first << ": " << it->second << std::endl;
   }
+}
+
+std::string HTTPRequestParser::getBoundary() const {
+    std::map<std::string, std::string>::const_iterator it = headers.find("content-type");
+    if (it != headers.end()) {
+        const std::string& contentType = it->second;
+        std::cout << "Content-Type: " << contentType << std::endl;
+        std::istringstream stream(contentType);
+        std::string segment;
+
+        while (std::getline(stream, segment, ';')) {
+            std::size_t pos = segment.find("boundary=");
+            if (pos != std::string::npos) {
+                std::string boundary = segment.substr(pos + 9); // 9 is the length of "boundary="
+
+                // Remove leading whitespace
+                std::size_t start = boundary.find_first_not_of(" \t");
+                if (start != std::string::npos) {
+                    boundary = boundary.substr(start);
+                }
+
+                // Remove trailing whitespace
+                std::size_t end = boundary.find_last_not_of(" \t");
+                if (end != std::string::npos) {
+                    boundary = boundary.substr(0, end + 1);
+                }
+
+                // Remove quotes if any
+                if (boundary.size() >= 2 && boundary[0] == '"' && boundary[boundary.size() - 1] == '"') {
+                    boundary = boundary.substr(1, boundary.size() - 2);
+                }
+
+                return boundary;
+            }
+        }
+    }
+    return ""; // Return empty string if boundary is not found
 }

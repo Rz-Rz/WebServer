@@ -35,7 +35,6 @@ int main(int argc, char** argv) {
     for (std::map<std::string, Server>::iterator it = servers.begin(); it != servers.end(); ++it) {
         Server& serverConfig = it->second;
         std::cout << "Processing server: " << serverConfig.getServerName() << std::endl;
-        serverConfig.printRoutes();
         int server_fd = socket(AF_INET, SOCK_STREAM, 0);
         if (server_fd == -1) {
             Logger::log(ERROR, "Error creating socket: " + std::string(strerror(errno)));

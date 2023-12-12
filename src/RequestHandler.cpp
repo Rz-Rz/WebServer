@@ -9,6 +9,7 @@
 #include "ErrorPageManager.hpp"
 #include "ParsingUtils.hpp"
 #include <cstdlib>
+#include "MultipartFormDataParser.hpp"
 
 RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance) {}
 
@@ -207,8 +208,18 @@ std::string RequestHandler::extractFilename(const HTTPRequestParser& parser) {
     return "";
 }
 
+std::string RequestHandler::getUploadDirectoryFromUri(const Route& route, const std::string& uri) {
+  std::string uploadDir;
+  if (route.getAllowFileUpload())
+    uploadDir = route.getUploadLocation();
+  else
+    uploadDir = getFilePathFromUri(route, uri);
+  return uploadDir;
+}
+
 void RequestHandler::handleFileUpload(const Route& route) {
-  std::string filePath = getFilePathFromUri(route, parser.getUri());
+  std::string filePath = getUploadDirectoryFromUri(route, parser.getUri());
+  
   std::cout << "File path: " << filePath << std::endl;
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "Directory does not exist: " + filePath);
@@ -223,6 +234,33 @@ void RequestHandler::handleFileUpload(const Route& route) {
   if (isPayloadTooLarge()) {
     return;
   }
+
+  std::string body = parser.getBody();
+  std::string boundary = parser.getBoundary();
+
+  if (boundary.empty()) {
+    Logger::log(ERROR, "400 - No boundary found in multipart form data");
+    sendErrorResponse(400); // Bad Request
+    return;
+  }
+
+  MultipartFormDataParser multipartParser(body, boundary);
+  try {
+    multipartParser.parse();
+  } catch (const MultipartFormDataParser::MultipartFormDataParserException& e) {
+    Logger::log(ERROR, std::string("Error parsing multipart form data: ") + e.what());
+    sendErrorResponse(500); // Internal Server Error
+    return;
+  }
+
+  // Extracting the filename and file content
+  const std::map<std::string, std::string>& fileFields = multipartParser.getFileFields();
+  if (fileFields.empty()) {
+    Logger::log(ERROR, "No files found in the request");
+    sendErrorResponse(400); // Bad Request
+    return;
+  }
+
   // Directory exists and is writable
   Logger::log(INFO, "File upload on POST request: " + filePath);
   std::string fileContent = parser.getBody();
@@ -261,7 +299,6 @@ void RequestHandler::handlePostRequest(const Server& server) {
 
 void RequestHandler::handleRequest(const Server& server) {
   Route route;
-  server.printRoutes();
   if (parser.getMethod() == "GET") {
     handleGetRequest(server);
   }

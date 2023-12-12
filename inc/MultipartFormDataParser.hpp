@@ -16,6 +16,8 @@ class MultipartFormDataParser {
 
     std::map<std::string, std::string> getFormFields() const;
     std::map<std::string, std::string> getFileFields() const;
+    std::string getFormField(const std::string& fieldName) const;
+    std::string getFileField(const std::string& fieldName) const;
 
     class MultipartFormDataParserException : public std::exception {
       private:

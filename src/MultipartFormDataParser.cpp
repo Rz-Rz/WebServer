@@ -1,28 +1,15 @@
 #include "MultipartFormDataParser.hpp"
 #include <sstream>
+#include <iostream>
 
 
 
 void MultipartFormDataParser::parse() {
   std::vector<std::string> parts = splitBodyByBoundary();
+  std::cout << "Number of parts: " << parts.size() << std::endl;
   for (size_t i = 0; i < parts.size(); ++i) {
     parsePart(parts[i]);
   }
-}
-
-std::vector<std::string> MultipartFormDataParser::splitBodyByBoundary() {
-    std::vector<std::string> parts;
-    std::string delimiter = "--" + boundary + "\r\n";
-    size_t pos = 0;
-    std::string token;
-    while ((pos = body.find(delimiter)) != std::string::npos) {
-        token = body.substr(0, pos);
-        body.erase(0, pos + delimiter.length());
-        if (!token.empty()) {
-            parts.push_back(token);
-        }
-    }
-    return parts;
 }
 
 void MultipartFormDataParser::parseDisposition(const std::string& disposition, std::string& name, std::string& filename) {
@@ -54,7 +41,38 @@ void MultipartFormDataParser::parseDisposition(const std::string& disposition, s
     }
 }
 
+std::vector<std::string> MultipartFormDataParser::splitBodyByBoundary() {
+    std::vector<std::string> parts;
+    std::string fullBoundary = boundary; // Using the received boundary
+    std::string boundaryTerminator = fullBoundary + "--"; // Boundary terminator
+    size_t minimumValidPartSize = fullBoundary.length() + 2; // 2 is the length of CRLF after the boundary
+    size_t pos = 0;
+
+    while ((pos = body.find(fullBoundary, pos)) != std::string::npos) {
+        size_t start = pos + fullBoundary.length();
+        if (body[start] == '\r' && body[start + 1] == '\n') {
+            start += 2; // Skip CRLF after the boundary
+        }
+
+        pos = body.find(fullBoundary, start);
+        if (pos == std::string::npos) {
+            pos = body.find(boundaryTerminator, start); // Check for boundary terminator
+        }
+
+        std::string token = body.substr(start, pos - start);
+        trim(token); // Remove leading and trailing whitespace/newlines
+
+        // Skip parts that are too small to be valid (e.g., residual "--")
+        if (!token.empty() && token.size() > minimumValidPartSize) { 
+            parts.push_back(token);
+        }
+    }
+    return parts;
+}
+
 void MultipartFormDataParser::parsePart(const std::string& part) {
+  std::cout << "Parsing part, size: " << part.size() << std::endl;
+  std::cout << "Part content: " << part << std::endl; // Be cautious with large parts
     // First, split the part into headers and content.
     std::string::size_type pos = part.find("\r\n\r\n");
     if (pos == std::string::npos) {
@@ -74,12 +92,15 @@ void MultipartFormDataParser::parsePart(const std::string& part) {
     if (it != headers.end()) {
         // Example Content-Disposition: form-data; name="fieldName"; filename="filename.jpg"
         std::string disposition = it->second;
+        std::cout << "Content-Disposition: " << disposition << std::endl;
 
         // Parse the disposition to extract name and filename
         std::string name, filename;
         // You need to implement parseDisposition that parses the disposition string
         // and extracts name and filename
         parseDisposition(disposition, name, filename);
+        std::cout << "name: " << name << std::endl;
+        std::cout << "filename: " << filename << std::endl;
 
         if (!filename.empty()) {
             // It's a file field
@@ -149,6 +170,24 @@ std::map<std::string, std::string> MultipartFormDataParser::getFileFields() cons
 
 std::map<std::string, std::string> MultipartFormDataParser::getFormFields() const {
     return formFields;
+}
+
+std::string MultipartFormDataParser::getFileField(const std::string& fieldName) const {
+    std::map<std::string, std::string>::const_iterator it = fileFields.find(fieldName);
+    if (it != fileFields.end()) {
+        return it->second;
+    } else {
+        return "";
+    }
+}
+
+std::string MultipartFormDataParser::getFormField(const std::string& fieldName) const {
+    std::map<std::string, std::string>::const_iterator it = formFields.find(fieldName);
+    if (it != formFields.end()) {
+        return it->second;
+    } else {
+        return "";
+    }
 }
 
 MultipartFormDataParser::MultipartFormDataParserException::MultipartFormDataParserException(const std::string& msg)

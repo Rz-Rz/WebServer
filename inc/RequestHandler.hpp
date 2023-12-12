@@ -4,6 +4,7 @@
 #include "HTTPRequestParser.hpp"
 #include "EventHandler.hpp"
 #include "Server.hpp"
+#include "MultipartFormDataParser.hpp"
 
 class RequestHandler : public EventHandler {
   private: 
@@ -24,6 +25,7 @@ class RequestHandler : public EventHandler {
     bool isPayloadTooLarge(void);
     std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath);
     std::string extractFilename(const HTTPRequestParser& parser);
+    std::string getFilename(const MultipartFormDataParser& parser);
 
 
   public:

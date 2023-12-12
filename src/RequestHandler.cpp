@@ -261,6 +261,7 @@ void RequestHandler::handleFileUpload(const Route& route) {
     return;
   }
 
+  filePath += getFilename(multipartParser);
   // Directory exists and is writable
   Logger::log(INFO, "File upload on POST request: " + filePath);
   std::string fileContent = parser.getBody();
@@ -305,6 +306,17 @@ void RequestHandler::handleRequest(const Server& server) {
   else if (parser.getMethod() == "POST") {
     handlePostRequest(server);
   }
+}
+
+std::string RequestHandler::getFilename(const MultipartFormDataParser& parser) {
+  std::string filename = parser.getFileField("filename");
+  if (filename.empty()) {
+    filename = extractFilename(this->parser);
+    if (filename.empty()) {
+      filename = "untitled";
+    }
+  }
+  return filename;
 }
 
 void RequestHandler::sendRedirectResponse(const std::string& redirectLocation) {

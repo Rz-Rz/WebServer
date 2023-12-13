@@ -348,7 +348,12 @@ void ConfigurationParser::parseMethods(std::string& line, Route& route) {
       Logger::log(INFO, "POST method found for route " + route.getRoutePath());
       route.setPostMethod(true);
     }
-    if (!route.getGetMethod() && !route.getPostMethod())
+    if (ParsingUtils::matcher(method, "DELETE"))
+    {
+      Logger::log(INFO, "DELETE method found for route " + route.getRoutePath());
+      route.setDeleteMethod(true);
+    }
+    if (!route.getGetMethod() && !route.getPostMethod() && !route.getDeleteMethod())
     {
       Logger::log(ERROR, "Invalid method: " + method);
       throw ConfigurationParser::InvalidConfigurationException("Invalid method: " + method);
@@ -390,7 +395,7 @@ void ConfigurationParser::parseRoot(std::string& line, Route& route) {
 
   if (root.empty()) {
     Logger::log(WARNING, "root is empty, using default root: " + root);
-    root = "/var/www/webserver/"; // Default compiled-in path
+    return;
   }
   // Check for relative paths leading outside of server root
   if (root.find("../") != std::string::npos) {
@@ -398,14 +403,14 @@ void ConfigurationParser::parseRoot(std::string& line, Route& route) {
   }
   if (ParsingUtils::doesPathExist(root) == false) {
     Logger::log(WARNING, "root path does not exist: " + root + " reverting to default root.");
-    root = "/var/www/webserver/";
+    return;
   } else if (ParsingUtils::hasReadPermissions(root) == false) {
     Logger::log(WARNING, "root path does not have read permissions: " + root + " reverting to default root.");
-    root = "/var/www/webserver/";
+    return;
   }
   else if (ParsingUtils::hasWritePermissions(root) == false) {
     Logger::log(WARNING, "root path does not have write permissions: " + root + " reverting to default root.");
-    root = "/var/www/webserver/"; // Default compiled-in path
+    return;
   }
   Logger::log(INFO, "Root: " + root + " for route " + route.getRoutePath());
   route.setRootDirectoryPath(root);
@@ -413,7 +418,6 @@ void ConfigurationParser::parseRoot(std::string& line, Route& route) {
 
 
 void ConfigurationParser::parseDirectoryListing(std::string& line, Route& route) {
-  std::cout << "BGI TEST" << std::endl;
   std::istringstream iss(line);
   std::string listing;
   iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
@@ -526,7 +530,6 @@ void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
 
   if (location.empty()) {
     Logger::log(WARNING, "upload_location is empty, reverting to default.");
-    route.setUploadLocation("/var/www/webserver/uploads/");
     return;
   }
   if (ParsingUtils::controlCharacters(location)) {
@@ -540,14 +543,4 @@ void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
   }
   Logger::log(INFO, "Upload location: " + location + " for route " + route.getRoutePath());
   route.setUploadLocation(location);
-}
-
-std::string getCurrentExecutablePath() {
-  char result[PATH_MAX];
-  ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
-  std::string path(result, (count > 0) ? count : 0);
-
-  // If you want just the directory, you can do:
-  size_t found = path.find_last_of("/\\");
-  return path.substr(0, found);
 }

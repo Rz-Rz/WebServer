@@ -10,6 +10,7 @@
 #include <dirent.h>
 #include "Logger.hpp"
 #include <string.h>
+#include <unistd.h>
 
 
 ParsingUtils::ParsingUtils() {}
@@ -219,4 +220,37 @@ std::vector<std::string> ParsingUtils::getDirectoryContents(const std::string& d
       throw std::runtime_error("Error opening directory: " + std::string(strerror(errno)));
     }
     return contents;
+}
+
+std::string ParsingUtils::getCurrentWorkingDirectory(void) {
+  char buffer[PATH_MAX];
+  if (getcwd(buffer, sizeof(buffer)) != NULL) {
+    return std::string(buffer);
+  } else {
+    // Handle error
+    return "";
+  }
+}
+
+bool ParsingUtils::hasWriteAndExecutePermissions(const std::string& path) {
+    struct stat st;
+
+    if (stat(path.c_str(), &st) != 0) {
+        // Error in retrieving the stat info
+        perror("Error getting directory information");
+        return false;
+    }
+
+    // Check if current user is the owner of the directory
+    if (st.st_uid == getuid()) {
+        return (st.st_mode & S_IWUSR) && (st.st_mode & S_IXUSR);
+    }
+
+    // Check if current user is part of the directory's group
+    if (st.st_gid == getgid()) {
+        return (st.st_mode & S_IWGRP) && (st.st_mode & S_IXGRP);
+    }
+
+    // Check for others
+    return (st.st_mode & S_IWOTH) && (st.st_mode & S_IXOTH);
 }

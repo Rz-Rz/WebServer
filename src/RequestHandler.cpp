@@ -20,28 +20,51 @@ RequestHandler::~RequestHandler() {
 void RequestHandler::handle_event(uint32_t events) {
   if (events & EPOLLIN) {
     char buffer[1024];
-    ssize_t bytes_read = read(client_fd, buffer, 1024);
-    if (bytes_read > 0) {
-      buffer[bytes_read] = '\0';
-      // Append data to the parser
-      parser.appendData(std::string(buffer, bytes_read));
-      std::cout << "Received " << bytes_read << " bytes from client" << std::endl;
-      // Check if the request line and headers are parsed
-      if (parser.isRequestLineParsed() && parser.areHeadersParsed()) {
-        //process the response
-        RequestHandler::handleRequest(server);
+
+    while (true) {
+      ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer));
+      if (bytes_read > 0) {
+        std::cout << "Received " << bytes_read << " bytes" << std::endl;
+        std::cout << "DATA: " << std::endl << std::string(buffer, bytes_read) << std::endl << "END OF DATA"  << std::endl;
+        try {
+          parser.appendData(std::string(buffer, bytes_read));
+        } catch (const HTTPRequestParser::HTTPRequestParserException& e) {
+          Logger::log(ERROR, std::string("Error parsing HTTP request: ") + e.what());
+          delete this;
+          break;
+        }
+        // Check if the entire request has been received
+        if (parser.isCompleteRequest()) {
+          std::cout << "Received complete request" << std::endl;
+          // Process the request
+          RequestHandler::handleRequest(server);
+          break;
+        }
       }
-    }
-    else if (bytes_read == 0) {
-      std::cout << "Client disconnected" << std::endl;
-      delete this;
-    }
-    else {
-      std::cerr << "Error reading from client: " << strerror(errno) << std::endl;
-      delete this;
+      else if (bytes_read == 0) {
+        // Client disconnected
+        std::cout << "Client disconnected" << std::endl;
+        delete this;
+        break;
+      }
+      else {
+        // Check the error code
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+          // Resource temporarily unavailable, which is normal for non-blocking sockets
+          std::cout << "No more data available at the moment, waiting for more data" << std::endl;
+          break;
+        } else {
+          // Actual error reading from client
+          std::cerr << "Error reading from client: " << strerror(errno) << std::endl;
+          delete this;
+          break;
+        }
+      }
     }
   }
 }
+
+
 
 int RequestHandler::get_handle() const {
   return client_fd;
@@ -219,23 +242,12 @@ std::string RequestHandler::getUploadDirectoryFromUri(const Route& route, const 
 
 void RequestHandler::handleFileUpload(const Route& route) {
   std::string filePath = getUploadDirectoryFromUri(route, parser.getUri());
-  
-  std::cout << "File path: " << filePath << std::endl;
-  if (!ParsingUtils::doesPathExist(filePath)) {
-    Logger::log(ERROR, "Directory does not exist: " + filePath);
-    sendErrorResponse(403);
-    return;
-  }
-  if (!ParsingUtils::hasWritePermissions(filePath)) {
-    Logger::log(ERROR, "Directory is not writable: " + filePath);
-    sendErrorResponse(403);
-    return;
-  }
   if (isPayloadTooLarge()) {
     return;
   }
 
   std::string body = parser.getBody();
+  std::cout << "BODY in HANDLE FILE UPLOAD: " << body << std::endl  << "END OF BODY IN HANDLE FILE UPLOAD"  << std::endl;
   std::string boundary = parser.getBoundary();
 
   if (boundary.empty()) {
@@ -261,7 +273,20 @@ void RequestHandler::handleFileUpload(const Route& route) {
     return;
   }
 
+  if (!ParsingUtils::doesPathExist(filePath)) {
+    Logger::log(ERROR, "Directory does not exist: " + filePath);
+    sendErrorResponse(403);
+    return;
+  }
+
+  if (!ParsingUtils::hasWritePermissions(filePath)) {
+    Logger::log(ERROR, "Directory is not writable: " + filePath);
+    sendErrorResponse(403);
+    return;
+  }
+
   filePath += getFilename(multipartParser);
+
   // Directory exists and is writable
   Logger::log(INFO, "File upload on POST request: " + filePath);
   std::string fileContent = parser.getBody();
@@ -298,6 +323,61 @@ void RequestHandler::handlePostRequest(const Server& server) {
   }
 }
 
+std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
+    size_t pos = filePath.find_last_of("/\\");
+    if (pos != std::string::npos) {
+        return filePath.substr(0, pos); // Return the directory path
+    }
+    return ""; // Return empty string if no directory separator found
+}
+
+void RequestHandler::handleDeleteRequest(const Server& server) {
+  Route route;
+  try {
+    route = server.getRoute(parser.getUri());
+  } catch (const std::out_of_range& e) {
+    sendErrorResponse(404);
+    Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
+    return;
+  }
+
+  if (!route.getDeleteMethod()) {
+    sendErrorResponse(405);
+    Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
+    return;
+  }
+
+  std::string filePath = getFilePathFromUri(route, parser.getUri());
+  if (!ParsingUtils::doesPathExist(filePath)) {
+    Logger::log(ERROR, "404 - File not found: " + filePath);
+    sendErrorResponse(404);
+    return;
+  }
+
+  std::string directoryPath = extractDirectoryPath(filePath);
+  if (!ParsingUtils::doesPathExist(directoryPath)) {
+    Logger::log(ERROR, "403 - Directory does not exist: " + directoryPath);
+    sendErrorResponse(403);
+    return;
+  }
+
+  //check if write and execute permissions are set in the directory in order to delete file.
+  if (!ParsingUtils::hasWriteAndExecutePermissions(directoryPath)) {
+    Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + filePath);
+    sendErrorResponse(403);
+    return;
+  }
+
+  if (unlink(filePath.c_str()) != 0) {
+    Logger::log(ERROR, "500 - Error deleting file: " + filePath);
+    sendErrorResponse(500);
+    return;
+  }
+
+  sendSuccessResponse("200 OK", "text/html", "File deleted successfully");
+  return;
+}
+
 void RequestHandler::handleRequest(const Server& server) {
   Route route;
   if (parser.getMethod() == "GET") {
@@ -306,6 +386,8 @@ void RequestHandler::handleRequest(const Server& server) {
   else if (parser.getMethod() == "POST") {
     handlePostRequest(server);
   }
+  else if (parser.getMethod() == "DELETE")
+    handleDeleteRequest(server);
 }
 
 std::string RequestHandler::getFilename(const MultipartFormDataParser& parser) {

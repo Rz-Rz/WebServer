@@ -12,7 +12,6 @@ class RequestHandler : public EventHandler {
     HTTPRequestParser parser;
     Server server;
 
-    void sendErrorResponse(int errorCode);
     void sendRedirectResponse(const std::string& redirectLocation);
     void sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content);
     void handleGetRequest(const Server& server);
@@ -26,6 +25,7 @@ class RequestHandler : public EventHandler {
     std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath);
     std::string extractFilename(const HTTPRequestParser& parser);
     std::string getFilename(const MultipartFormDataParser& parser);
+    std::string extractDirectoryPath(const std::string& filePath);
 
 
   public:
@@ -37,5 +37,6 @@ class RequestHandler : public EventHandler {
     std::string getFilePathFromUri(const Route& route, const std::string& uri);
     std::string getUploadDirectoryFromUri(const Route& route, const std::string& uri);
     int get_handle() const;
+    static void sendErrorResponse(int errorCode);
 };
 #endif

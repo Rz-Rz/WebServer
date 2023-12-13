@@ -9,8 +9,7 @@
 
 class MultipartFormDataParser {
   public:
-    MultipartFormDataParser(const std::string& body, const std::string& boundary)
-        : body(body), boundary(boundary) {}
+    MultipartFormDataParser(const std::string& body, const std::string& boundary);
 
     void parse();
 

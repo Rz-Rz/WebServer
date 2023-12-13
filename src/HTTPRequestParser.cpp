@@ -1,5 +1,8 @@
 #include "HTTPRequestParser.hpp"
+#include "RequestHandler.hpp"
 #include "Logger.hpp"
+
+HTTPRequestParser::HTTPRequestParser() : contentLength(0), isContentLengthParsed(false), requestLineParsed(false), headersParsed(false), isPostRequest(false) {}
 
 bool HTTPRequestParser::parseRequestLine(const std::string& requestLine) {
   std::istringstream iss(requestLine);
@@ -9,26 +12,85 @@ bool HTTPRequestParser::parseRequestLine(const std::string& requestLine) {
   ParsingUtils::trim(method);
   ParsingUtils::trim(uri);
   ParsingUtils::trim(httpVersion);
+
+  if (method != "GET" && method != "POST" && method != "DELETE") {
+    Logger::log(ERROR, "Invalid method: " + method);
+    RequestHandler::sendErrorResponse(405);
+    throw HTTPRequestParserException("Invalid method: " + method);
+  }
+
+  if (httpVersion != "HTTP/1.1") {
+    Logger::log(ERROR, "Invalid HTTP version: " + httpVersion);
+    RequestHandler::sendErrorResponse(505);
+    throw HTTPRequestParserException("Invalid HTTP version: " + httpVersion);
+  }
+
+  if (method == "POST") {
+    isPostRequest = true;
+  }
+
+  std::cout << "Method: " << method << std::endl;
+  std::cout << "URI: " << uri << std::endl;
+  std::cout << "HTTP Version: " << httpVersion << std::endl;
   return true;
 }
 
-void HTTPRequestParser::appendData(const std::string& data) {
-  requestData.append(data);
-  if (!requestLineParsed) {
-    size_t lineEnd = requestData.find("\r\n");
-    if (lineEnd != std::string::npos) {
-      if (parseRequestLine(requestData.substr(0, lineEnd))) {
-        requestLineParsed = true;
-        requestData.erase(0, lineEnd + 2);
+void HTTPRequestParser::parseContentLength() {
+      if (headers.find("content-length") != headers.end()) {
+          std::istringstream(headers["content-length"]) >> contentLength;
+          isContentLengthParsed = true;
       }
+}
+
+bool HTTPRequestParser::isCompleteRequest() const {
+    // Check if both the request line and headers have been parsed
+    if (!requestLineParsed || !headersParsed) {
+        return false;
     }
-  }
-  if (requestLineParsed && !headersParsed) {
-    if (requestData.find("\r\n\r\n") != std::string::npos) {
-      parseHeaders();
-      extractBody();
+
+    // For requests with a content length, check if the entire body has been received
+    if (isContentLengthParsed) {
+        return requestData.size() >= contentLength;
     }
-  }
+
+    // For requests without a content length (like GET), the request is complete
+    // once the headers are parsed
+    return true;
+}
+
+void HTTPRequestParser::appendData(const std::string& data) {
+    requestData.append(data);
+    // Parse the request line if not already done
+    if (!requestLineParsed) {
+        size_t lineEnd = requestData.find("\r\n");
+        if (lineEnd != std::string::npos) {
+            if (parseRequestLine(requestData.substr(0, lineEnd))) {
+                requestLineParsed = true;
+                requestData.erase(0, lineEnd + 2);  // Remove the request line from requestData
+            }
+        }
+    }
+
+    // Parse the headers if not already done and request line was parsed
+    if (requestLineParsed && !headersParsed) {
+        size_t headerEnd = requestData.find("\r\n\r\n");
+        if (headerEnd != std::string::npos) {
+            parseHeaders();
+            headersParsed = true;
+        }
+    }
+
+    if (isPostRequest && headersParsed) {
+        parseContentLength();
+    }
+
+    // Process the body if headers are parsed and the content length header is present
+    if (headersParsed && isContentLengthParsed) {
+        if (requestData.length() >= contentLength) {
+            extractBody();  // Assuming this method extracts the body from requestData
+            // Optionally, you can clear requestData here if you don't expect more data
+        }
+    }
 }
 
 bool HTTPRequestParser::parseHeaders() {
@@ -42,7 +104,6 @@ bool HTTPRequestParser::parseHeaders() {
       ParsingUtils::trimAndLower(key);
       ParsingUtils::trim(value);
       headers[key] = value;
-      std::cout << "key: " << key << " value: " << value << std::endl;
     } else {
       Logger::log(ERROR, "Invalid header line: " + line);
       return false;
@@ -57,6 +118,7 @@ void HTTPRequestParser::extractBody() {
   size_t headersEnd = requestData.find("\r\n\r\n");
   if (headersEnd != std::string::npos) {
     body = requestData.substr(headersEnd + 4);
+    // std::cout << "WITHIN PARSING Body: " << body << std::endl;
   }
 }
 
@@ -101,7 +163,7 @@ bool HTTPRequestParser::areHeadersParsed() const {
 void HTTPRequestParser::printHeaders() const {
   std::map<std::string, std::string> hdrs = getHeaders();
   for (std::map<std::string, std::string>::const_iterator it = hdrs.begin(); it != hdrs.end(); ++it) {
-    std::cout << it->first << ": " << it->second << std::endl;
+    // std::cout << it->first << ": " << it->second << std::endl;
   }
 }
 
@@ -109,7 +171,7 @@ std::string HTTPRequestParser::getBoundary() const {
     std::map<std::string, std::string>::const_iterator it = headers.find("content-type");
     if (it != headers.end()) {
         const std::string& contentType = it->second;
-        std::cout << "Content-Type: " << contentType << std::endl;
+        // std::cout << "Content-Type: " << contentType << std::endl;
         std::istringstream stream(contentType);
         std::string segment;
 
@@ -141,3 +203,11 @@ std::string HTTPRequestParser::getBoundary() const {
     }
     return ""; // Return empty string if boundary is not found
 }
+
+HTTPRequestParser::HTTPRequestParserException::HTTPRequestParserException(const std::string& msg) : message(msg) {}
+
+const char* HTTPRequestParser::HTTPRequestParserException::what() const throw() {
+    return message.c_str();
+}
+
+HTTPRequestParser::HTTPRequestParserException::~HTTPRequestParserException() throw() {}

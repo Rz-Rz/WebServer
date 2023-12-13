@@ -3,10 +3,12 @@
 #include <iostream>
 
 
+     
+MultipartFormDataParser::MultipartFormDataParser(const std::string& body, const std::string& boundary)
+    : body(body), boundary(boundary) {}
 
 void MultipartFormDataParser::parse() {
   std::vector<std::string> parts = splitBodyByBoundary();
-  std::cout << "Number of parts: " << parts.size() << std::endl;
   for (size_t i = 0; i < parts.size(); ++i) {
     parsePart(parts[i]);
   }
@@ -41,38 +43,55 @@ void MultipartFormDataParser::parseDisposition(const std::string& disposition, s
     }
 }
 
+
 std::vector<std::string> MultipartFormDataParser::splitBodyByBoundary() {
     std::vector<std::string> parts;
-    std::string fullBoundary = boundary; // Using the received boundary
-    std::string boundaryTerminator = fullBoundary + "--"; // Boundary terminator
-    size_t minimumValidPartSize = fullBoundary.length() + 2; // 2 is the length of CRLF after the boundary
+    std::string fullBoundary = boundary;
+    std::string boundaryTerminator = fullBoundary + "--";
+    size_t minimumValidPartSize = fullBoundary.length();
     size_t pos = 0;
+
+    // std::cout << "Full boundary: " << fullBoundary << std::endl;
+
+     // Log the body content for debugging
+    // std::cout << "Body content: " << std::endl << body << std::endl;
 
     while ((pos = body.find(fullBoundary, pos)) != std::string::npos) {
         size_t start = pos + fullBoundary.length();
+
         if (body[start] == '\r' && body[start + 1] == '\n') {
-            start += 2; // Skip CRLF after the boundary
+            start += 2;
         }
 
         pos = body.find(fullBoundary, start);
         if (pos == std::string::npos) {
-            pos = body.find(boundaryTerminator, start); // Check for boundary terminator
+            pos = body.find(boundaryTerminator, start);
         }
 
-        std::string token = body.substr(start, pos - start);
-        trim(token); // Remove leading and trailing whitespace/newlines
+        if (pos != std::string::npos) {
+            std::string token = body.substr(start, pos - start);
+            trim(token);
 
-        // Skip parts that are too small to be valid (e.g., residual "--")
-        if (!token.empty() && token.size() > minimumValidPartSize) { 
-            parts.push_back(token);
+            if (!token.empty() && token.size() > minimumValidPartSize) {
+                parts.push_back(token);
+            } else {
+                std::cout << "Discarded small or empty token" << std::endl;
+            }
+        } else {
+            std::cout << "Boundary terminator not found after position: " << start << std::endl;
         }
     }
+
+    // if (parts.size() == 0) {
+    //     std::cout << "No parts found" << std::endl;
+    // } else {
+    //     std::cout << "Found " << parts.size() << " parts" << std::endl;
+    // }
+
     return parts;
 }
 
 void MultipartFormDataParser::parsePart(const std::string& part) {
-  std::cout << "Parsing part, size: " << part.size() << std::endl;
-  std::cout << "Part content: " << part << std::endl; // Be cautious with large parts
     // First, split the part into headers and content.
     std::string::size_type pos = part.find("\r\n\r\n");
     if (pos == std::string::npos) {
@@ -92,19 +111,16 @@ void MultipartFormDataParser::parsePart(const std::string& part) {
     if (it != headers.end()) {
         // Example Content-Disposition: form-data; name="fieldName"; filename="filename.jpg"
         std::string disposition = it->second;
-        std::cout << "Content-Disposition: " << disposition << std::endl;
 
         // Parse the disposition to extract name and filename
         std::string name, filename;
         // You need to implement parseDisposition that parses the disposition string
         // and extracts name and filename
         parseDisposition(disposition, name, filename);
-        std::cout << "name: " << name << std::endl;
-        std::cout << "filename: " << filename << std::endl;
 
         if (!filename.empty()) {
             // It's a file field
-            fileFields[name] = contentPart;
+            fileFields["filename"] = filename;
         } else {
             // It's a regular form field
             formFields[name] = contentPart;

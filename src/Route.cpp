@@ -1,17 +1,20 @@
 #include "Route.hpp"
+#include "ParsingUtils.hpp"
 
 
 Route::Route()
 {
     this->getMethod = false;
     this->postMethod = false;
+    this->deleteMethod = false;
     this->has_redirect = false;
     this->directoryListing = false;
     this->has_CGI = false;
     this->allowFileUpload = false;
     this->hasDefaultFile = false;
-    this->rootDirectoryPath = "/var/www/webserver/";
-    this->uploadLocation = "/var/www/webserver/uploads/";
+    std::string cwd = ParsingUtils::getCurrentWorkingDirectory();
+    this->rootDirectoryPath = cwd + "/webserv/";
+    this->uploadLocation = cwd + "/webserv/uploads/";
 }
 
 // Setters
@@ -33,6 +36,11 @@ void Route::setGetMethod(const bool value)
 void Route::setPostMethod(const bool value)
 {
     this->postMethod = value;
+}
+
+void Route::setDeleteMethod(const bool value)
+{
+    this->deleteMethod = value;
 }
 
 void Route::setRedirectLocation(const std::string& redirect)
@@ -144,4 +152,9 @@ std::string Route::getUploadLocation() const
 bool Route::getHasDefaultFile() const
 {
     return this->hasDefaultFile;
+}
+
+bool Route::getDeleteMethod() const
+{
+    return this->deleteMethod;
 }

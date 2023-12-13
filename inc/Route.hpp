@@ -12,6 +12,7 @@ public:
     void setRoutePath(const std::string& path);
     void setGetMethod(const bool value);
     void setPostMethod(const bool value);
+    void setDeleteMethod(const bool value);
     void setRedirectLocation(const std::string& redirect);
     void setRedirect(const bool value);
     void setRootDirectoryPath(const std::string& path);
@@ -26,6 +27,7 @@ public:
     std::string getRoutePath() const;
     bool getGetMethod() const;
     bool getPostMethod() const;
+    bool getDeleteMethod() const;
     std::string getRedirectLocation() const;
     bool getRedirect() const;
     std::string getRootDirectoryPath() const;
@@ -41,6 +43,7 @@ private:
     std::string routePath;
     bool getMethod;
     bool postMethod;
+    bool deleteMethod;
     bool has_redirect;
     std::string redirect;
     std::string rootDirectoryPath;

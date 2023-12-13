@@ -1,0 +1,197 @@
+linemethods=GET
+linemethods=GET,POST
+linemethods=GET
+linemethods=GET
+linemethods=GET,POST,DELETE
+Number of servers to process: 1
+Processing server: example.com
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------4bca1df065ad925a
+
+--------------------------4bca1df065ad925a
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------4bca1df065ad925a--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------90d86f870cfd7da7
+
+--------------------------90d86f870cfd7da7
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------90d86f870cfd7da7--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 193 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------e6c877d3413defea
+
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+Received 236 bytes
+DATA: 
+--------------------------e6c877d3413defea
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------e6c877d3413defea--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------e17c0e655ba297b2
+
+--------------------------e17c0e655ba297b2
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------e17c0e655ba297b2--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------258841f18ada0c9b
+
+--------------------------258841f18ada0c9b
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------258841f18ada0c9b--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------a7d92eba726119aa
+
+--------------------------a7d92eba726119aa
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------a7d92eba726119aa--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------8e44787729aef733
+
+--------------------------8e44787729aef733
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------8e44787729aef733--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: 
+END OF BODY IN HANDLE FILE UPLOAD
+Client disconnected
+Signal 2 received.
+Cleaning up resources...

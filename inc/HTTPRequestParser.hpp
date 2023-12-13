@@ -15,15 +15,19 @@ private:
     std::string httpVersion;
     std::map<std::string, std::string> headers;
     std::string body;
+    size_t contentLength;
+    bool isContentLengthParsed;
     bool requestLineParsed;
     bool headersParsed;
+    bool isPostRequest;
 
     bool parseRequestLine(const std::string& requestLine);
     bool parseHeaders(void);
     void extractBody(void);
+    void parseContentLength();
 
 public:
-    HTTPRequestParser() : requestLineParsed(false), headersParsed(false) {}
+    HTTPRequestParser();
 
     void appendData(const std::string& data);
 
@@ -35,10 +39,20 @@ public:
     std::string getBody() const;
     std::string getBoundary() const;
 
+    bool isCompleteRequest() const;
     bool isRequestLineParsed() const;
     bool areHeadersParsed() const;
 
     void printHeaders() const;
+
+    class HTTPRequestParserException : public std::exception {
+    private:
+        std::string message;
+    public:
+        HTTPRequestParserException(const std::string& msg);
+        virtual const char* what() const throw();
+        virtual ~HTTPRequestParserException() throw();
+    };
 };
 
 #endif

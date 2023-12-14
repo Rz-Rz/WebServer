@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sys/epoll.h>
 #include <errno.h>
+#include "HTTPRequestParser.hpp"
 #include "Logger.hpp"
 #include "ErrorPageManager.hpp"
 #include "ParsingUtils.hpp"
@@ -28,8 +29,15 @@ void RequestHandler::handle_event(uint32_t events) {
         std::cout << "DATA: " << std::endl << std::string(buffer, bytes_read) << std::endl << "END OF DATA"  << std::endl;
         try {
           parser.appendData(std::string(buffer, bytes_read));
-        } catch (const HTTPRequestParser::HTTPRequestParserException& e) {
-          Logger::log(ERROR, std::string("Error parsing HTTP request: ") + e.what());
+        } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
+          Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
+          sendErrorResponse(505);
+          delete this;
+          break;
+        }
+        catch (const HTTPRequestParser::InvalidMethodException& e) {
+          Logger::log(ERROR, "Error Parsing HTTP Request: " + std::string(e.what()));
+          sendErrorResponse(405);
           delete this;
           break;
         }

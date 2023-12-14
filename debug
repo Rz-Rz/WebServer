@@ -7,16 +7,24 @@ Number of servers to process: 1
 Processing server: example.com
 AcceptHandler::handle_event
 Accepting a connection
-Received 429 bytes
+Received 193 bytes
 DATA: 
 POST /uploads HTTP/1.1
 Host: 127.0.0.1:8080
 User-Agent: curl/7.81.0
 Accept: */*
 Content-Length: 236
-Content-Type: multipart/form-data; boundary=------------------------4bca1df065ad925a
+Content-Type: multipart/form-data; boundary=------------------------95196b2c7f11db22
 
---------------------------4bca1df065ad925a
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+No more data available at the moment, waiting for more data
+Received 236 bytes
+DATA: 
+--------------------------95196b2c7f11db22
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
@@ -24,12 +32,23 @@ this is a text <fieldset>
   as a test
 </fieldset>
 
---------------------------4bca1df065ad925a--
+--------------------------95196b2c7f11db22--
 
 END OF DATA
 Received complete request
-BODY in HANDLE FILE UPLOAD: 
+BODY in HANDLE FILE UPLOAD: --------------------------95196b2c7f11db22
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------95196b2c7f11db22--
+
 END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
 Client disconnected
 AcceptHandler::handle_event
 Accepting a connection
@@ -40,9 +59,9 @@ Host: 127.0.0.1:8080
 User-Agent: curl/7.81.0
 Accept: */*
 Content-Length: 236
-Content-Type: multipart/form-data; boundary=------------------------90d86f870cfd7da7
+Content-Type: multipart/form-data; boundary=------------------------4090eaeeff252332
 
---------------------------90d86f870cfd7da7
+--------------------------4090eaeeff252332
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
@@ -50,12 +69,266 @@ this is a text <fieldset>
   as a test
 </fieldset>
 
---------------------------90d86f870cfd7da7--
+--------------------------4090eaeeff252332--
 
 END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
 Received complete request
-BODY in HANDLE FILE UPLOAD: 
+BODY in HANDLE FILE UPLOAD: --------------------------4090eaeeff252332
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------4090eaeeff252332--
+
 END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------b0111ba7269f7b5d
+
+--------------------------b0111ba7269f7b5d
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------b0111ba7269f7b5d--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------b0111ba7269f7b5d
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------b0111ba7269f7b5d--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------ac75fde9d65870a2
+
+--------------------------ac75fde9d65870a2
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------ac75fde9d65870a2--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------ac75fde9d65870a2
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------ac75fde9d65870a2--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------d55c42084efe57b6
+
+--------------------------d55c42084efe57b6
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------d55c42084efe57b6--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------d55c42084efe57b6
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------d55c42084efe57b6--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------3e75e29cf8e3b109
+
+--------------------------3e75e29cf8e3b109
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------3e75e29cf8e3b109--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------3e75e29cf8e3b109
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------3e75e29cf8e3b109--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------7a12e3b39125ede5
+
+--------------------------7a12e3b39125ede5
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------7a12e3b39125ede5--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------7a12e3b39125ede5
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------7a12e3b39125ede5--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------65565e4c22497b8d
+
+--------------------------65565e4c22497b8d
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------65565e4c22497b8d--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------65565e4c22497b8d
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------65565e4c22497b8d--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
 Client disconnected
 AcceptHandler::handle_event
 Accepting a connection
@@ -66,16 +339,16 @@ Host: 127.0.0.1:8080
 User-Agent: curl/7.81.0
 Accept: */*
 Content-Length: 236
-Content-Type: multipart/form-data; boundary=------------------------e6c877d3413defea
+Content-Type: multipart/form-data; boundary=------------------------3362cee064c30fb8
 
 
 END OF DATA
-Received complete request
-BODY in HANDLE FILE UPLOAD: 
-END OF BODY IN HANDLE FILE UPLOAD
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
 Received 236 bytes
 DATA: 
---------------------------e6c877d3413defea
+--------------------------3362cee064c30fb8
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
@@ -83,24 +356,11 @@ this is a text <fieldset>
   as a test
 </fieldset>
 
---------------------------e6c877d3413defea--
+--------------------------3362cee064c30fb8--
 
 END OF DATA
 Received complete request
-BODY in HANDLE FILE UPLOAD: 
-END OF BODY IN HANDLE FILE UPLOAD
-AcceptHandler::handle_event
-Accepting a connection
-Received 429 bytes
-DATA: 
-POST /uploads HTTP/1.1
-Host: 127.0.0.1:8080
-User-Agent: curl/7.81.0
-Accept: */*
-Content-Length: 236
-Content-Type: multipart/form-data; boundary=------------------------e17c0e655ba297b2
-
---------------------------e17c0e655ba297b2
+BODY in HANDLE FILE UPLOAD: --------------------------3362cee064c30fb8
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
@@ -108,12 +368,11 @@ this is a text <fieldset>
   as a test
 </fieldset>
 
---------------------------e17c0e655ba297b2--
+--------------------------3362cee064c30fb8--
 
-END OF DATA
-Received complete request
-BODY in HANDLE FILE UPLOAD: 
 END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
 Client disconnected
 AcceptHandler::handle_event
 Accepting a connection
@@ -124,9 +383,9 @@ Host: 127.0.0.1:8080
 User-Agent: curl/7.81.0
 Accept: */*
 Content-Length: 236
-Content-Type: multipart/form-data; boundary=------------------------258841f18ada0c9b
+Content-Type: multipart/form-data; boundary=------------------------4f2032fc0ba72f2d
 
---------------------------258841f18ada0c9b
+--------------------------4f2032fc0ba72f2d
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
@@ -134,12 +393,70 @@ this is a text <fieldset>
   as a test
 </fieldset>
 
---------------------------258841f18ada0c9b--
+--------------------------4f2032fc0ba72f2d--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------4f2032fc0ba72f2d
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------4f2032fc0ba72f2d--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 193 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------8fbb3a70de53c60f
+
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received 236 bytes
+DATA: 
+--------------------------8fbb3a70de53c60f
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------8fbb3a70de53c60f--
 
 END OF DATA
 Received complete request
-BODY in HANDLE FILE UPLOAD: 
+BODY in HANDLE FILE UPLOAD: --------------------------8fbb3a70de53c60f
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------8fbb3a70de53c60f--
+
 END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
 Client disconnected
 AcceptHandler::handle_event
 Accepting a connection
@@ -150,9 +467,9 @@ Host: 127.0.0.1:8080
 User-Agent: curl/7.81.0
 Accept: */*
 Content-Length: 236
-Content-Type: multipart/form-data; boundary=------------------------a7d92eba726119aa
+Content-Type: multipart/form-data; boundary=------------------------2665df20019abae4
 
---------------------------a7d92eba726119aa
+--------------------------2665df20019abae4
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
@@ -160,12 +477,114 @@ this is a text <fieldset>
   as a test
 </fieldset>
 
---------------------------a7d92eba726119aa--
+--------------------------2665df20019abae4--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------2665df20019abae4
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------2665df20019abae4--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 193 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------7bb3325f85a47586
+
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received 236 bytes
+DATA: 
+--------------------------7bb3325f85a47586
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------7bb3325f85a47586--
 
 END OF DATA
 Received complete request
-BODY in HANDLE FILE UPLOAD: 
+BODY in HANDLE FILE UPLOAD: --------------------------7bb3325f85a47586
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------7bb3325f85a47586--
+
 END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 193 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------923bd60c303c9982
+
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received 236 bytes
+DATA: 
+--------------------------923bd60c303c9982
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------923bd60c303c9982--
+
+END OF DATA
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------923bd60c303c9982
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------923bd60c303c9982--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
 Client disconnected
 AcceptHandler::handle_event
 Accepting a connection
@@ -176,9 +595,9 @@ Host: 127.0.0.1:8080
 User-Agent: curl/7.81.0
 Accept: */*
 Content-Length: 236
-Content-Type: multipart/form-data; boundary=------------------------8e44787729aef733
+Content-Type: multipart/form-data; boundary=------------------------b4c1754abfe236ef
 
---------------------------8e44787729aef733
+--------------------------b4c1754abfe236ef
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
@@ -186,12 +605,807 @@ this is a text <fieldset>
   as a test
 </fieldset>
 
---------------------------8e44787729aef733--
+--------------------------b4c1754abfe236ef--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------b4c1754abfe236ef
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------b4c1754abfe236ef--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------67cbd4fc42d22ab2
+
+--------------------------67cbd4fc42d22ab2
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------67cbd4fc42d22ab2--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------67cbd4fc42d22ab2
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------67cbd4fc42d22ab2--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------6f46d860bfc3af32
+
+--------------------------6f46d860bfc3af32
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------6f46d860bfc3af32--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------6f46d860bfc3af32
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------6f46d860bfc3af32--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------b784ec49ea848a12
+
+--------------------------b784ec49ea848a12
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------b784ec49ea848a12--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------b784ec49ea848a12
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------b784ec49ea848a12--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------7f451f64d442e0ea
+
+--------------------------7f451f64d442e0ea
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------7f451f64d442e0ea--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------7f451f64d442e0ea
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------7f451f64d442e0ea--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 193 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------4bb1b144f5efe445
+
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received 236 bytes
+DATA: 
+--------------------------4bb1b144f5efe445
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------4bb1b144f5efe445--
 
 END OF DATA
 Received complete request
-BODY in HANDLE FILE UPLOAD: 
+BODY in HANDLE FILE UPLOAD: --------------------------4bb1b144f5efe445
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------4bb1b144f5efe445--
+
 END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
 Client disconnected
-Signal 2 received.
-Cleaning up resources...
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------d4ec4fd3fc638107
+
+--------------------------d4ec4fd3fc638107
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------d4ec4fd3fc638107--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------d4ec4fd3fc638107
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------d4ec4fd3fc638107--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------bc281d44e54688d5
+
+--------------------------bc281d44e54688d5
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------bc281d44e54688d5--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------bc281d44e54688d5
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------bc281d44e54688d5--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------45f8b09e8d3309bb
+
+--------------------------45f8b09e8d3309bb
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------45f8b09e8d3309bb--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------45f8b09e8d3309bb
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------45f8b09e8d3309bb--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------244aaa2aa82e9500
+
+--------------------------244aaa2aa82e9500
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------244aaa2aa82e9500--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------244aaa2aa82e9500
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------244aaa2aa82e9500--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------116f7b0d96b5a16e
+
+--------------------------116f7b0d96b5a16e
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------116f7b0d96b5a16e--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------116f7b0d96b5a16e
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------116f7b0d96b5a16e--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------98cc68b905f66577
+
+--------------------------98cc68b905f66577
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------98cc68b905f66577--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------98cc68b905f66577
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------98cc68b905f66577--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------6bc6eb416f33154a
+
+--------------------------6bc6eb416f33154a
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------6bc6eb416f33154a--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------6bc6eb416f33154a
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------6bc6eb416f33154a--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------a9254b5d6c2b9b19
+
+--------------------------a9254b5d6c2b9b19
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------a9254b5d6c2b9b19--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------a9254b5d6c2b9b19
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------a9254b5d6c2b9b19--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------5daac241e6fecf0b
+
+--------------------------5daac241e6fecf0b
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------5daac241e6fecf0b--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------5daac241e6fecf0b
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------5daac241e6fecf0b--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------c9377ebe99843538
+
+--------------------------c9377ebe99843538
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------c9377ebe99843538--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------c9377ebe99843538
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------c9377ebe99843538--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 430 bytes
+DATA: 
+POST /uploads/ HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------38e5a61465bdc332
+
+--------------------------38e5a61465bdc332
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------38e5a61465bdc332--
+
+END OF DATA
+Method: POST
+URI: /uploads/
+HTTP Version: HTTP/1.1
+Received complete request
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------a10a96b469f1ecb1
+
+--------------------------a10a96b469f1ecb1
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------a10a96b469f1ecb1--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------a10a96b469f1ecb1
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------a10a96b469f1ecb1--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 81 bytes
+DATA: 
+GET /dir HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /dir
+HTTP Version: HTTP/1.1
+Received complete request
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 78 bytes
+DATA: 
+GET / HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /
+HTTP Version: HTTP/1.1
+Received complete request
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 86 bytes
+DATA: 
+GET /redirect HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /redirect
+HTTP Version: HTTP/1.1
+Received complete request
+Redirecting to: /
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 86 bytes
+DATA: 
+GET /redirect HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /redirect
+HTTP Version: HTTP/1.1
+Received complete request
+Redirecting to: /
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 78 bytes
+DATA: 
+GET / HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /
+HTTP Version: HTTP/1.1
+Received complete request
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 81 bytes
+DATA: 
+GET /xxx HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /xxx
+HTTP Version: HTTP/1.1
+Received complete request
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 81 bytes
+DATA: 
+PUT /xxx HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA

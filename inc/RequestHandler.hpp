@@ -37,6 +37,6 @@ class RequestHandler : public EventHandler {
     std::string getFilePathFromUri(const Route& route, const std::string& uri);
     std::string getUploadDirectoryFromUri(const Route& route, const std::string& uri);
     int get_handle() const;
-    static void sendErrorResponse(int errorCode);
+    void sendErrorResponse(int errorCode);
 };
 #endif

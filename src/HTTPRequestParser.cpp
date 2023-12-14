@@ -13,17 +13,11 @@ bool HTTPRequestParser::parseRequestLine(const std::string& requestLine) {
   ParsingUtils::trim(uri);
   ParsingUtils::trim(httpVersion);
 
-  if (method != "GET" && method != "POST" && method != "DELETE") {
-    Logger::log(ERROR, "Invalid method: " + method);
-    RequestHandler::sendErrorResponse(405);
-    throw HTTPRequestParserException("Invalid method: " + method);
-  }
+  if (method != "GET" && method != "POST" && method != "DELETE")
+    throw InvalidMethodException();
 
-  if (httpVersion != "HTTP/1.1") {
-    Logger::log(ERROR, "Invalid HTTP version: " + httpVersion);
-    RequestHandler::sendErrorResponse(505);
-    throw HTTPRequestParserException("Invalid HTTP version: " + httpVersion);
-  }
+  if (httpVersion != "HTTP/1.1")
+    throw InvalidHTTPVersionException();
 
   if (method == "POST") {
     isPostRequest = true;
@@ -55,6 +49,9 @@ bool HTTPRequestParser::isCompleteRequest() const {
 
     // For requests without a content length (like GET), the request is complete
     // once the headers are parsed
+    if (!isPostRequest) {
+        return true;
+    }
     return true;
 }
 
@@ -203,11 +200,3 @@ std::string HTTPRequestParser::getBoundary() const {
     }
     return ""; // Return empty string if boundary is not found
 }
-
-HTTPRequestParser::HTTPRequestParserException::HTTPRequestParserException(const std::string& msg) : message(msg) {}
-
-const char* HTTPRequestParser::HTTPRequestParserException::what() const throw() {
-    return message.c_str();
-}
-
-HTTPRequestParser::HTTPRequestParserException::~HTTPRequestParserException() throw() {}

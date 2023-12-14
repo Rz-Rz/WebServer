@@ -7,27 +7,25 @@
 0047: Accept: */*
 0054: Content-Length: 236
 0069: Content-Type: multipart/form-data; boundary=--------------------
-00a9: ----8e44787729aef733
+00a9: ----a10a96b469f1ecb1
 00bf: 
 => Send data, 236 bytes (0xec)
-0000: --------------------------8e44787729aef733
+0000: --------------------------a10a96b469f1ecb1
 002c: Content-Disposition: form-data; name="file"; filename="test.txt"
 006e: Content-Type: text/plain
 0088: 
 008a: this is a text <fieldset>.  as a test.</fieldset>.
-00be: --------------------------8e44787729aef733--
+00be: --------------------------a10a96b469f1ecb1--
 == Info: We are completely uploaded and fine
 == Info: Mark bundle as not supporting multiuse
-<= Recv header, 43 bytes (0x2b)
-0000: HTTP/1.1 400 Bad Request. Error code: 400
+<= Recv header, 17 bytes (0x11)
+0000: HTTP/1.1 200 OK
 <= Recv header, 25 bytes (0x19)
 0000: Content-Type: text/html
-<= Recv header, 21 bytes (0x15)
-0000: Content-Length: 149
+<= Recv header, 20 bytes (0x14)
+0000: Content-Length: 26
 <= Recv header, 2 bytes (0x2)
 0000: 
-<= Recv data, 149 bytes (0x95)
-0000: <!DOCTYPE html>.<html>.<head>.    <title>Error</title>.</head>.<
-0040: body>.    <h1>Error: 400</h1>.    <p>Bad Request. Error code: 40
-0080: 0</p>.</body>.</html>
+<= Recv data, 26 bytes (0x1a)
+0000: File uploaded successfully
 == Info: Connection #0 to host 127.0.0.1 left intact

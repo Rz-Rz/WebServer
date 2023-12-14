@@ -45,13 +45,17 @@ public:
 
     void printHeaders() const;
 
-    class HTTPRequestParserException : public std::exception {
-    private:
-        std::string message;
+    class InvalidHTTPVersionException : public std::exception {
     public:
-        HTTPRequestParserException(const std::string& msg);
-        virtual const char* what() const throw();
-        virtual ~HTTPRequestParserException() throw();
+        virtual const char* what() const throw() {
+            return "Invalid HTTP version";
+        }
+    };
+    class InvalidMethodException : public std::exception {
+    public:
+        virtual const char* what() const throw() {
+            return "Invalid method";
+        }
     };
 };
 

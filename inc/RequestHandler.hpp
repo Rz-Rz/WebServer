@@ -21,11 +21,18 @@ class RequestHandler : public EventHandler {
     void handleDirectoryRequest(const Route& route);
     void handleFileRequest(const Route& route);
     void handleFileUpload(const Route& route);
+    void handleCGIRequest(const Route& route);
+    void setCGIEnvironment(const std::string& queryString);
+    std::string executeCGI(const std::string& filePath);
     bool isPayloadTooLarge(void);
     std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath);
     std::string extractFilename(const HTTPRequestParser& parser);
     std::string getFilename(const MultipartFormDataParser& parser);
     std::string extractDirectoryPath(const std::string& filePath);
+    std::string extractQueryString(const std::string& uri);
+    std::string extractRouteFromUri(const std::string& uri);
+    std::string endWithSlash(const std::string& uri);
+
 
 
   public:

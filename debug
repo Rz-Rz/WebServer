@@ -1409,3 +1409,164 @@ Accept: */*
 
 
 END OF DATA
+Signal 2 received.
+Cleaning up resources...
+linemethods=GET
+linemethods=GET,POST
+linemethods=GET
+linemethods=GET
+linemethods=GET,POST,DELETE
+Number of servers to process: 1
+Processing server: example.com
+AcceptHandler::handle_event
+Accepting a connection
+Received 81 bytes
+DATA: 
+PUT /xxx HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+AcceptHandler::handle_event
+Accepting a connection
+Received 81 bytes
+DATA: 
+GET /xxx HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /xxx
+HTTP Version: HTTP/1.1
+Received complete request
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 86 bytes
+DATA: 
+GET /redirect HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /redirect
+HTTP Version: HTTP/1.1
+Received complete request
+Redirecting to: /
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 78 bytes
+DATA: 
+GET / HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /
+HTTP Version: HTTP/1.1
+Received complete request
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 81 bytes
+DATA: 
+GET /api HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /api
+HTTP Version: HTTP/1.1
+Received complete request
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 81 bytes
+DATA: 
+GET /dir HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: GET
+URI: /dir
+HTTP Version: HTTP/1.1
+Received complete request
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 429 bytes
+DATA: 
+POST /uploads HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Content-Length: 236
+Content-Type: multipart/form-data; boundary=------------------------80c839e90e412699
+
+--------------------------80c839e90e412699
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------80c839e90e412699--
+
+END OF DATA
+Method: POST
+URI: /uploads
+HTTP Version: HTTP/1.1
+Received complete request
+BODY in HANDLE FILE UPLOAD: --------------------------80c839e90e412699
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+this is a text <fieldset>
+  as a test
+</fieldset>
+
+--------------------------80c839e90e412699--
+
+END OF BODY IN HANDLE FILE UPLOAD
+Boundary terminator not found after position: 232
+Sent response with status code: 200 OK
+Client disconnected
+AcceptHandler::handle_event
+Accepting a connection
+Received 97 bytes
+DATA: 
+DELETE /uploads/test.txt HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/7.81.0
+Accept: */*
+
+
+END OF DATA
+Method: DELETE
+URI: /uploads/test.txt
+HTTP Version: HTTP/1.1
+Received complete request
+Client disconnected
+Signal 2 received.
+Cleaning up resources...

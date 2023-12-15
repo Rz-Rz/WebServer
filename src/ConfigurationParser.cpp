@@ -481,12 +481,10 @@ void ConfigurationParser::parseCgiExtensions(std::string& line, Route& route) {
   while (iss2 >> extension) {
     if (extension.empty()) {
       Logger::log(WARNING, "Empty extension found in cgi_extensions, reverting to default (false).");
-      route.setHasCGI(false);
       return;
     }
     if (ParsingUtils::controlCharacters(extension)) {
       Logger::log(WARNING, "Control characters found in cgi_extensions: " + extension + ", reverting to default (false).");
-      route.setHasCGI(false);
       return;
     }
     if (extension[0] != '.') {
@@ -496,6 +494,7 @@ void ConfigurationParser::parseCgiExtensions(std::string& line, Route& route) {
     extensionsList.push_back(extension);
   }
   Logger::log(INFO, "CGI extensions: " + extensions + " for route " + route.getRoutePath());
+  route.setHasCGI(true);
   route.setCgiExtensions(extensionsList);
 }
 

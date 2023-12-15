@@ -50,7 +50,7 @@ private:
     bool directoryListing;
     std::string defaultFile;
     bool hasDefaultFile;
-    bool has_CGI;
+    bool hasCGI;
     std::vector<std::string> cgiExtensions;
     bool allowFileUpload;
     std::string uploadLocation;

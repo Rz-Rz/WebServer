@@ -11,6 +11,7 @@
 #include "ParsingUtils.hpp"
 #include <cstdlib>
 #include "MultipartFormDataParser.hpp"
+#include <sys/wait.h>
 
 RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance) {}
 
@@ -25,8 +26,6 @@ void RequestHandler::handle_event(uint32_t events) {
     while (true) {
       ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer));
       if (bytes_read > 0) {
-        std::cout << "Received " << bytes_read << " bytes" << std::endl;
-        std::cout << "DATA: " << std::endl << std::string(buffer, bytes_read) << std::endl << "END OF DATA"  << std::endl;
         try {
           parser.appendData(std::string(buffer, bytes_read));
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
@@ -72,8 +71,6 @@ void RequestHandler::handle_event(uint32_t events) {
   }
 }
 
-
-
 int RequestHandler::get_handle() const {
   return client_fd;
 }
@@ -86,7 +83,6 @@ std::string RequestHandler::getFilePathFromUri(const Route& route, const std::st
     if (!rootPath.empty() && rootPath[rootPath.length() - 1] != '/') {
         filePath += "/";
     }
-
     // Append the URI to the root directory path, omitting the leading slash in the URI
     if (!uri.empty() && uri != "/") {
         if (uri[0] == '/') {
@@ -98,7 +94,6 @@ std::string RequestHandler::getFilePathFromUri(const Route& route, const std::st
         // Use the default file if the URI is just '/'
         filePath += route.getDefaultFile();
     }
-
     return filePath;
 }
 
@@ -185,14 +180,34 @@ void RequestHandler::handleFileRequest(const Route& route) {
   }
 }
 
+std::string RequestHandler::extractRouteFromUri(const std::string& uri) {
+  size_t pos = uri.find('?');
+  if (pos != std::string::npos) {
+    return uri.substr(0, pos);
+  }
+  return uri;
+}
+
+std::string RequestHandler::endWithSlash(const std::string& uri) {
+  if (uri[uri.length() - 1] != '/') {
+    return uri + "/";
+  }
+  return uri;
+}
 
 void RequestHandler::handleGetRequest(const Server& server) {
+  std::string filePath = extractDirectoryPath(parser.getUri());
+  std::cout << "FILEPATH: " << filePath << std::endl;
+  filePath = extractRouteFromUri(filePath);
+  filePath = endWithSlash(filePath);
+  std::cout << "FILEPATH FROM extractRoute: " << filePath << std::endl;
   Route route;
   try {
-    route = server.getRoute(parser.getUri());
+    route = server.getRoute(filePath);
   } catch (const std::out_of_range& e) {
     // No route found for this URI
     sendErrorResponse(404);
+    std::cout << "IN THE WRONG PLACE" << std::endl;
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
@@ -210,10 +225,106 @@ void RequestHandler::handleGetRequest(const Server& server) {
     handleDirectoryRequest(route);
     return;
   }
+  else if (route.getHasCGI()) {
+    handleCGIRequest(route);
+    return;
+  }
   else {
     handleFileRequest(route);
     return;
   }
+}
+
+void RequestHandler::setCGIEnvironment(const std::string& queryString) {
+  setenv("QUERY_STRING", queryString.c_str(), 1);
+}
+
+void RequestHandler::handleCGIRequest(const Route& route) {
+  std::cout << "IN CGI REQUEST" << std::endl;
+  std::string queryString = extractQueryString(parser.getUri());
+  std::string filePath = extractDirectoryPath(parser.getUri());
+  filePath = getFilePathFromUri(route, filePath);
+
+  if (!ParsingUtils::doesPathExist(filePath)) {
+    Logger::log(ERROR, "404 - File not found: " + filePath);
+    sendErrorResponse(404);
+    return;
+  }
+
+  if (!ParsingUtils::hasReadPermissions(filePath)) {
+    Logger::log(ERROR, "403 - File is not readable: " + filePath);
+    sendErrorResponse(403);
+    return;
+  }
+
+  if (!ParsingUtils::hasExecutePermissions(filePath)) {
+    Logger::log(ERROR, "403 - File is not executable: " + filePath);
+    sendErrorResponse(403);
+    return;
+  }
+
+  setCGIEnvironment(queryString);
+  // File exists and is readable and executable
+  Logger::log(INFO, "CGI request on GET request: " + filePath);
+  std::string output = RequestHandler::executeCGI(filePath);
+  sendSuccessResponse("200 OK", "text/html", output);
+  return;
+}
+
+std::string RequestHandler::executeCGI(const std::string& filePath) {
+    int pipefd[2];
+    pid_t pid;
+    char buf;
+
+    // Create a pipe for the child process's output
+    if (pipe(pipefd) == -1) {
+        throw std::runtime_error("Failed to create pipe");
+    }
+
+    // Fork the current process
+    pid = fork();
+    if (pid == -1) {
+        throw std::runtime_error("Failed to fork process");
+    }
+
+    if (pid == 0) {
+        // Child process
+        // Close the read-end of the pipe, we're not going to read from it
+        close(pipefd[0]);          
+        // Redirect stdout to the write-end of the pipe
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
+        // Convert filePath to a format suitable for execve
+        char* execArgs[2];
+        execArgs[0] = const_cast<char*>(filePath.c_str());
+        execArgs[1] = NULL;  // execve expects a NULL terminated array
+        // Execute the CGI script
+        execve(execArgs[0], execArgs, environ);
+        // Use _exit to terminate the child process if execve fails
+        _exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+        // Close the write-end of the pipe, we're not going to write to it
+        close(pipefd[1]);          
+        // Read the output of the CGI script from the read-end of the pipe
+        std::ostringstream stream;
+        while (read(pipefd[0], &buf, 1) > 0) {
+            stream << buf;
+        }
+        // Close the read-end of the pipe
+        close(pipefd[0]);          
+        // Wait for the child process to finish
+        waitpid(pid, NULL, 0);    
+        return stream.str();
+    }
+}
+
+std::string RequestHandler::extractQueryString(const std::string& uri) {
+    size_t queryStringPos = uri.find('?');
+    if (queryStringPos != std::string::npos) {
+        return uri.substr(queryStringPos + 1);
+    }
+    return "";
 }
 
 bool RequestHandler::isPayloadTooLarge(void) {
@@ -312,6 +423,7 @@ void RequestHandler::handleFileUpload(const Route& route) {
 
 void RequestHandler::handlePostRequest(const Server& server) {
   Route route;
+  
   try {
     route = server.getRoute(parser.getUri());
   } catch (const std::out_of_range& e) {
@@ -341,37 +453,33 @@ std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
 
 void RequestHandler::handleDeleteRequest(const Server& server) {
   Route route;
+  std::string filePath = extractDirectoryPath(parser.getUri());
   try {
-    route = server.getRoute(parser.getUri());
+    route = server.getRoute(filePath);
   } catch (const std::out_of_range& e) {
     sendErrorResponse(404);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
 
+  filePath = getFilePathFromUri(route, parser.getUri());
   if (!route.getDeleteMethod()) {
     sendErrorResponse(405);
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
 
-  std::string filePath = getFilePathFromUri(route, parser.getUri());
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
     sendErrorResponse(404);
     return;
   }
 
-  std::string directoryPath = extractDirectoryPath(filePath);
-  if (!ParsingUtils::doesPathExist(directoryPath)) {
-    Logger::log(ERROR, "403 - Directory does not exist: " + directoryPath);
-    sendErrorResponse(403);
-    return;
-  }
+  std::string dir = extractDirectoryPath(filePath);
 
   //check if write and execute permissions are set in the directory in order to delete file.
-  if (!ParsingUtils::hasWriteAndExecutePermissions(directoryPath)) {
-    Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + filePath);
+  if (!ParsingUtils::hasWriteAndExecutePermissions(dir)) {
+    Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + dir);
     sendErrorResponse(403);
     return;
   }
@@ -458,4 +566,3 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
 
     std::cout << "Sent response with status code: " << statusCode << std::endl;
 }
-

@@ -254,3 +254,8 @@ bool ParsingUtils::hasWriteAndExecutePermissions(const std::string& path) {
     // Check for others
     return (st.st_mode & S_IWOTH) && (st.st_mode & S_IXOTH);
 }
+
+bool ParsingUtils::hasExecutePermissions(const std::string &path)
+{
+  return access(path.c_str(), X_OK) == 0;
+}

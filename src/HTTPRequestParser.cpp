@@ -22,10 +22,6 @@ bool HTTPRequestParser::parseRequestLine(const std::string& requestLine) {
   if (method == "POST") {
     isPostRequest = true;
   }
-
-  std::cout << "Method: " << method << std::endl;
-  std::cout << "URI: " << uri << std::endl;
-  std::cout << "HTTP Version: " << httpVersion << std::endl;
   return true;
 }
 

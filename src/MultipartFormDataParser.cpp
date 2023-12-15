@@ -51,11 +51,6 @@ std::vector<std::string> MultipartFormDataParser::splitBodyByBoundary() {
     size_t minimumValidPartSize = fullBoundary.length();
     size_t pos = 0;
 
-    // std::cout << "Full boundary: " << fullBoundary << std::endl;
-
-     // Log the body content for debugging
-    // std::cout << "Body content: " << std::endl << body << std::endl;
-
     while ((pos = body.find(fullBoundary, pos)) != std::string::npos) {
         size_t start = pos + fullBoundary.length();
 
@@ -81,13 +76,6 @@ std::vector<std::string> MultipartFormDataParser::splitBodyByBoundary() {
             std::cout << "Boundary terminator not found after position: " << start << std::endl;
         }
     }
-
-    // if (parts.size() == 0) {
-    //     std::cout << "No parts found" << std::endl;
-    // } else {
-    //     std::cout << "Found " << parts.size() << " parts" << std::endl;
-    // }
-
     return parts;
 }
 

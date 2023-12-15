@@ -1,7 +1,6 @@
 #include "Route.hpp"
 #include "ParsingUtils.hpp"
 
-
 Route::Route()
 {
     this->getMethod = false;
@@ -9,7 +8,7 @@ Route::Route()
     this->deleteMethod = false;
     this->has_redirect = false;
     this->directoryListing = false;
-    this->has_CGI = false;
+    this->hasCGI = false;
     this->allowFileUpload = false;
     this->hasDefaultFile = false;
     std::string cwd = ParsingUtils::getCurrentWorkingDirectory();
@@ -70,7 +69,7 @@ void Route::setDefaultFile(const std::string& file)
 
 void Route::setHasCGI(bool value)
 {
-    this->has_CGI = value;
+    this->hasCGI = value;
 }
 
 void Route::setCgiExtensions(const std::vector<std::string>& extensions)
@@ -131,7 +130,7 @@ std::string Route::getDefaultFile() const
 
 bool Route::getHasCGI() const
 {
-    return this->has_CGI;
+    return this->hasCGI;
 }
 
 std::vector<std::string> Route::getCgiExtensions() const

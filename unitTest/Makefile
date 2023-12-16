@@ -10,11 +10,15 @@ LDFLAGS = -Wl,-rpath=$(HOME)/Criterion/build/src -L$(HOME)/Criterion/build/src -
 # Source files
 SOURCES = ConfigurationParsing.cpp ../src/ConfigurationParser.cpp ../src/ParsingUtils.cpp ../src/Logger.cpp ../src/Server.cpp ../src/Route.cpp
 
+SOURCES_REQHANDLER = ReqHand.cpp ../src/ConfigurationParser.cpp ../src/ParsingUtils.cpp ../src/Logger.cpp ../src/Server.cpp ../src/Route.cpp ../src/ErrorPageManager.cpp ../src/RequestHandler.cpp ../src/HTTPRequestParser.cpp ../src/MultipartFormDataParser.cpp ../src/RouteDebug.cpp
+
 SOURCES_UTILS = Utils.cpp ../src/Logger.cpp
 # Target binary name
 TARGET = crit_test
 
 UTILS = utils
+
+REQHANDLER = req
 
 # Build target
 $(TARGET): $(SOURCES)
@@ -22,6 +26,9 @@ $(TARGET): $(SOURCES)
 
 $(UTILS): $(SOURCES_UTILS)
 	$(CXX) -o $(UTILS) $(SOURCES_UTILS) $(CXXFLAGS) $(LDFLAGS)
+
+$(REQHANDLER): $(SOURCES_REQHANDLER)
+	$(CXX) -o $(REQHANDLER) $(SOURCES_REQHANDLER) $(CXXFLAGS) $(LDFLAGS)
 
 # Clean target
 clean:

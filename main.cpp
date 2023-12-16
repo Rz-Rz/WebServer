@@ -34,6 +34,7 @@ int main(int argc, char** argv) {
     std::cout << "Number of servers to process: " << servers.size() << std::endl;
     for (std::map<std::string, Server>::iterator it = servers.begin(); it != servers.end(); ++it) {
         Server& serverConfig = it->second;
+        serverConfig.printRoutes();
         std::cout << "Processing server: " << serverConfig.getServerName() << std::endl;
         int server_fd = socket(AF_INET, SOCK_STREAM, 0);
         if (server_fd == -1) {

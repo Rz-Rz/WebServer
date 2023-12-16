@@ -28,16 +28,17 @@ void RequestHandler::handle_event(uint32_t events) {
       if (bytes_read > 0) {
         try {
           parser.appendData(std::string(buffer, bytes_read));
+          std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
           Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
           sendErrorResponse(505);
-          delete this;
+          closeConnection();
           break;
         }
         catch (const HTTPRequestParser::InvalidMethodException& e) {
           Logger::log(ERROR, "Error Parsing HTTP Request: " + std::string(e.what()));
           sendErrorResponse(405);
-          delete this;
+          closeConnection();
           break;
         }
         // Check if the entire request has been received
@@ -45,6 +46,7 @@ void RequestHandler::handle_event(uint32_t events) {
           std::cout << "Received complete request" << std::endl;
           // Process the request
           RequestHandler::handleRequest(server);
+          closeConnection();
           break;
         }
       }
@@ -52,6 +54,7 @@ void RequestHandler::handle_event(uint32_t events) {
         // Client disconnected
         std::cout << "Client disconnected" << std::endl;
         delete this;
+        closeConnection();
         break;
       }
       else {
@@ -63,7 +66,7 @@ void RequestHandler::handle_event(uint32_t events) {
         } else {
           // Actual error reading from client
           std::cerr << "Error reading from client: " << strerror(errno) << std::endl;
-          delete this;
+          closeConnection();
           break;
         }
       }
@@ -103,6 +106,8 @@ void RequestHandler::sendErrorResponse(int errorCode) {
   responseStream << "HTTP/1.1 " << errorCode << " " << server.getErrorPageManager().errorCodeMessageParser(errorCode) << "\r\n";
   responseStream << "Content-Type: text/html\r\n";
   responseStream << "Content-Length: " << errorPageContent.size() << "\r\n";
+  // Inform the client that the connection will be closed after the response
+  responseStream << "Connection: close\r\n";
   responseStream << "\r\n";
   responseStream << errorPageContent;
 
@@ -197,17 +202,12 @@ std::string RequestHandler::endWithSlash(const std::string& uri) {
 
 void RequestHandler::handleGetRequest(const Server& server) {
   std::string filePath = extractDirectoryPath(parser.getUri());
-  std::cout << "FILEPATH: " << filePath << std::endl;
-  filePath = extractRouteFromUri(filePath);
-  filePath = endWithSlash(filePath);
-  std::cout << "FILEPATH FROM extractRoute: " << filePath << std::endl;
   Route route;
   try {
     route = server.getRoute(filePath);
   } catch (const std::out_of_range& e) {
     // No route found for this URI
     sendErrorResponse(404);
-    std::cout << "IN THE WRONG PLACE" << std::endl;
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
@@ -239,11 +239,18 @@ void RequestHandler::setCGIEnvironment(const std::string& queryString) {
   setenv("QUERY_STRING", queryString.c_str(), 1);
 }
 
+std::string RequestHandler::removeQueryString(const std::string& uri) {
+  size_t pos = uri.find('?');
+  if (pos != std::string::npos) {
+    return uri.substr(0, pos);
+  }
+  return uri;
+}
+
 void RequestHandler::handleCGIRequest(const Route& route) {
-  std::cout << "IN CGI REQUEST" << std::endl;
   std::string queryString = extractQueryString(parser.getUri());
-  std::string filePath = extractDirectoryPath(parser.getUri());
-  filePath = getFilePathFromUri(route, filePath);
+  std::string filePath = getFilePathFromUri(route, parser.getUri());
+  filePath = removeQueryString(filePath);
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
@@ -262,7 +269,6 @@ void RequestHandler::handleCGIRequest(const Route& route) {
     sendErrorResponse(403);
     return;
   }
-
   setCGIEnvironment(queryString);
   // File exists and is readable and executable
   Logger::log(INFO, "CGI request on GET request: " + filePath);
@@ -444,11 +450,33 @@ void RequestHandler::handlePostRequest(const Server& server) {
 }
 
 std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
-    size_t pos = filePath.find_last_of("/\\");
-    if (pos != std::string::npos) {
-        return filePath.substr(0, pos); // Return the directory path
+    if (filePath.empty()) {
+        return "";
     }
-    return ""; // Return empty string if no directory separator found
+
+    // Remove query string if present
+    size_t queryPos = filePath.find('?');
+    std::string pathWithoutQuery = (queryPos != std::string::npos) ? filePath.substr(0, queryPos) : filePath;
+    // Check if the path ends with a slash (and is not just a single slash)
+    if (pathWithoutQuery.length() > 1 && pathWithoutQuery[pathWithoutQuery.length() - 1] == '/') {
+        // Return the path without the trailing slash
+        return pathWithoutQuery.substr(0, pathWithoutQuery.length() - 1);
+    }
+
+    size_t pos = pathWithoutQuery.find_last_of("/\\");
+    if (pos != std::string::npos) {
+        // Check for dot after the last separator
+        size_t dotPos = pathWithoutQuery.find_last_of('.');
+        if (dotPos != std::string::npos && dotPos > pos) {
+            // Remove filename and extension
+            return pathWithoutQuery.substr(0, pos);
+        } else {
+            // No file extension, return the original path
+            return pathWithoutQuery;
+        }
+    }
+    // No directory separator found, treat as file without directory
+    return pathWithoutQuery;
 }
 
 void RequestHandler::handleDeleteRequest(const Server& server) {
@@ -548,6 +576,8 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
     // Adding headers
     responseStream << "Content-Type: " << contentType << "\r\n";
     responseStream << "Content-Length: " << content.size() << "\r\n";
+        // Inform the client that the connection will be closed after the response
+    responseStream << "Connection: close\r\n";
 
     // If you want to keep the connection alive, you can add Connection header
     // responseStream << "Connection: keep-alive\r\n";
@@ -565,4 +595,14 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
     write(client_fd, response.c_str(), response.size());
 
     std::cout << "Sent response with status code: " << statusCode << std::endl;
+}
+
+RequestHandler::RequestHandler() {}
+
+void RequestHandler::closeConnection(void) {
+    if (client_fd >= 0) {
+    close(client_fd);
+    client_fd = -1; // Invalidate the file descriptor
+  }
+  delete this;
 }

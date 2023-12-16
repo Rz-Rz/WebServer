@@ -331,7 +331,6 @@ void ConfigurationParser::parseMethods(std::string& line, Route& route) {
   std::istringstream iss(line);
   std::string method;
   iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  // Ignore everything until the '='
-  std::cout << "line" << line << std::endl;
   while (iss >> method) {
     if (method.empty()) {
       Logger::log(WARNING, "method are empty, GET and POST will be accepted for route " + route.getRoutePath());

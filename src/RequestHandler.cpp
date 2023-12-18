@@ -11,12 +11,13 @@
 #include "ParsingUtils.hpp"
 #include <cstdlib>
 #include "MultipartFormDataParser.hpp"
+#include "SystemUtils.hpp"
 #include <sys/wait.h>
 
-RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance) {}
+RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance), shouldBeDeleted(false) {}
 
 RequestHandler::~RequestHandler() {
-  close(client_fd);
+  SystemUtils::closeUtil(client_fd);
 }
 
 void RequestHandler::handle_event(uint32_t events) {
@@ -53,7 +54,6 @@ void RequestHandler::handle_event(uint32_t events) {
       else if (bytes_read == 0) {
         // Client disconnected
         std::cout << "Client disconnected" << std::endl;
-        delete this;
         closeConnection();
         break;
       }
@@ -296,10 +296,10 @@ std::string RequestHandler::executeCGI(const std::string& filePath) {
     if (pid == 0) {
         // Child process
         // Close the read-end of the pipe, we're not going to read from it
-        close(pipefd[0]);          
+        SystemUtils::closeUtil(pipefd[0]);          
         // Redirect stdout to the write-end of the pipe
         dup2(pipefd[1], STDOUT_FILENO);
-        close(pipefd[1]);
+        SystemUtils::closeUtil(pipefd[1]);
         // Convert filePath to a format suitable for execve
         char* execArgs[2];
         execArgs[0] = const_cast<char*>(filePath.c_str());
@@ -311,14 +311,14 @@ std::string RequestHandler::executeCGI(const std::string& filePath) {
     } else {
         // Parent process
         // Close the write-end of the pipe, we're not going to write to it
-        close(pipefd[1]);          
+        SystemUtils::closeUtil(pipefd[1]);          
         // Read the output of the CGI script from the read-end of the pipe
         std::ostringstream stream;
         while (read(pipefd[0], &buf, 1) > 0) {
             stream << buf;
         }
         // Close the read-end of the pipe
-        close(pipefd[0]);          
+        SystemUtils::closeUtil(pipefd[0]);          
         // Wait for the child process to finish
         waitpid(pid, NULL, 0);    
         return stream.str();
@@ -600,9 +600,13 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
 RequestHandler::RequestHandler() {}
 
 void RequestHandler::closeConnection(void) {
-    if (client_fd >= 0) {
-    close(client_fd);
+  if (client_fd >= 0) {
+    SystemUtils::closeUtil(client_fd);
     client_fd = -1; // Invalidate the file descriptor
   }
-  delete this;
+    delete this;
 }
+
+// bool RequestHandler::getShouldBeDeleted() const {
+//   return shouldBeDeleted;
+// }

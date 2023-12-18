@@ -11,6 +11,7 @@ class RequestHandler : public EventHandler {
     int client_fd;
     HTTPRequestParser parser;
     Server server;
+    bool shouldBeDeleted;
 
     void sendRedirectResponse(const std::string& redirectLocation);
     void sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content);
@@ -49,5 +50,6 @@ class RequestHandler : public EventHandler {
     int get_handle() const;
     void sendErrorResponse(int errorCode);
     std::string extractDirectoryPath(const std::string& filePath);
+    // bool getShouldBeDeleted(void) const;
 };
 #endif

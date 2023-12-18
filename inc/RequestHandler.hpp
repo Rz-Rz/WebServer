@@ -36,8 +36,6 @@ class RequestHandler : public EventHandler {
     std::string extractRouteFromUri(const std::string& uri);
     std::string endWithSlash(const std::string& uri);
 
-
-
   public:
     RequestHandler();
     explicit RequestHandler(int fd, Server& server);
@@ -50,6 +48,7 @@ class RequestHandler : public EventHandler {
     int get_handle() const;
     void sendErrorResponse(int errorCode);
     std::string extractDirectoryPath(const std::string& filePath);
+    std::string getMimeType(const std::string& filePath);
     // bool getShouldBeDeleted(void) const;
 };
 #endif

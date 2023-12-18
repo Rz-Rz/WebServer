@@ -11,6 +11,10 @@ Server::Server()
       this->customErrorPage = false;
       this->maxClientBodySize = 0;
       this->errorPageManager = ErrorPageManager();
+      mimeTypes["html"] = "text/html";
+      mimeTypes["css"] = "text/css";
+      mimeTypes["jpg"] = "image/jpeg";
+      mimeTypes["jpeg"] = "image/jpeg";
 }
 
 // Setters
@@ -102,6 +106,11 @@ Route Server::getRoute(const std::string& path) const
 ErrorPageManager Server::getErrorPageManager() const
 {
   return this->errorPageManager;
+}
+
+const std::map<std::string, std::string>& Server::getMimeTypes() const
+{
+  return this->mimeTypes;
 }
 
 //debug 

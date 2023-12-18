@@ -14,7 +14,8 @@
 #include "SystemUtils.hpp"
 #include <sys/wait.h>
 
-RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance), shouldBeDeleted(false) {}
+RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance) {
+}
 
 RequestHandler::~RequestHandler() {
   SystemUtils::closeUtil(client_fd);
@@ -29,7 +30,7 @@ void RequestHandler::handle_event(uint32_t events) {
       if (bytes_read > 0) {
         try {
           parser.appendData(std::string(buffer, bytes_read));
-          std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
+          // std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
           Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
           sendErrorResponse(505);
@@ -44,7 +45,7 @@ void RequestHandler::handle_event(uint32_t events) {
         }
         // Check if the entire request has been received
         if (parser.isCompleteRequest()) {
-          std::cout << "Received complete request" << std::endl;
+          Logger::log(INFO, "Received complete request");
           // Process the request
           RequestHandler::handleRequest(server);
           closeConnection();
@@ -53,7 +54,7 @@ void RequestHandler::handle_event(uint32_t events) {
       }
       else if (bytes_read == 0) {
         // Client disconnected
-        std::cout << "Client disconnected" << std::endl;
+        Logger::log(INFO, "Client disconnected");
         closeConnection();
         break;
       }
@@ -61,11 +62,11 @@ void RequestHandler::handle_event(uint32_t events) {
         // Check the error code
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
           // Resource temporarily unavailable, which is normal for non-blocking sockets
-          std::cout << "No more data available at the moment, waiting for more data" << std::endl;
+          Logger::log(INFO, "No more data available at the moment, waiting for more data");
           break;
         } else {
           // Actual error reading from client
-          std::cerr << "Error reading from client: " << strerror(errno) << std::endl;
+          Logger::log(ERROR, "Error reading from client: " + std::string(strerror(errno)));
           closeConnection();
           break;
         }
@@ -166,6 +167,37 @@ void RequestHandler::handleDirectoryRequest(const Route& route)
       return;
 }
 
+std::string RequestHandler::getMimeType(const std::string& filePath) {
+    Logger::log(DEBUG, "getMimeType called with filePath: " + filePath);
+
+    // Local map for MIME types
+    std::map<std::string, std::string> localMimeTypes;
+    localMimeTypes["html"] = "text/html";
+    localMimeTypes["css"] = "text/css";
+    localMimeTypes["jpg"] = "image/jpeg";
+    localMimeTypes["jpeg"] = "image/jpeg";
+    // Add more MIME types as needed
+
+    size_t dotPos = filePath.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        std::string extension = filePath.substr(dotPos + 1);
+        Logger::log(DEBUG, "Extracted file extension: " + extension);
+
+        std::ostringstream oss;
+        oss << localMimeTypes.size();
+        Logger::log(DEBUG, "Local MimeTypes map size: " + oss.str());
+
+        std::map<std::string, std::string>::const_iterator it = localMimeTypes.find(extension);
+        if (it != localMimeTypes.end()) {
+            Logger::log(DEBUG, "MIME type found: " + it->second);
+            return it->second;
+        }
+    }
+
+    Logger::log(WARNING, "Returning default MIME type for extension: " + filePath.substr(dotPos + 1));
+    return "application/octet-stream";
+}
+
 void RequestHandler::handleFileRequest(const Route& route) {
   std::string filePath = getFilePathFromUri(route, parser.getUri());
   if (ParsingUtils::isDirectory(filePath))
@@ -176,7 +208,8 @@ void RequestHandler::handleFileRequest(const Route& route) {
   }
   if (ParsingUtils::doesPathExistAndReadable(filePath)) {
     std::string fileContent = ParsingUtils::readFile(filePath);
-    sendSuccessResponse("200 OK", "text/html", fileContent);
+    sendSuccessResponse("200 OK", getMimeType(filePath), fileContent);
+    Logger::log(INFO, "File request on GET request: " + filePath); 
     return;
   } else {
     sendErrorResponse(404);
@@ -372,7 +405,6 @@ void RequestHandler::handleFileUpload(const Route& route) {
   }
 
   std::string body = parser.getBody();
-  std::cout << "BODY in HANDLE FILE UPLOAD: " << body << std::endl  << "END OF BODY IN HANDLE FILE UPLOAD"  << std::endl;
   std::string boundary = parser.getBoundary();
 
   if (boundary.empty()) {
@@ -448,6 +480,19 @@ void RequestHandler::handlePostRequest(const Server& server) {
     handleFileUpload(route);
   }
 }
+
+// std::string RequestHandler::getMimeType(const std::string& filePath) {
+//     size_t dotPos = filePath.find_last_of('.');
+//     if (dotPos != std::string::npos) {
+//         std::string extension = filePath.substr(dotPos + 1);
+//         const std::map<std::string, std::string>& mimeTypes = server.getMimeTypes();
+//         std::map<std::string, std::string>::const_iterator it = mimeTypes.find(extension);
+//         if (it != mimeTypes.end()) {
+//             return it->second;
+//         }
+//     }
+//     return "application/octet-stream";
+// }
 
 std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
     if (filePath.empty()) {
@@ -563,8 +608,7 @@ void RequestHandler::sendRedirectResponse(const std::string& redirectLocation) {
 
     std::string response = responseStream.str();
     write(client_fd, response.c_str(), response.size());
-
-    std::cout << "Redirecting to: " << redirectLocation << std::endl;
+    Logger::log(INFO, "Sent redirect response to: " + redirectLocation);
 }
 
 void RequestHandler::sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content) {
@@ -593,8 +637,7 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
 
     // Send the response to the client
     write(client_fd, response.c_str(), response.size());
-
-    std::cout << "Sent response with status code: " << statusCode << std::endl;
+    Logger::log(INFO, "Sent response with status code: " + statusCode);
 }
 
 RequestHandler::RequestHandler() {}
@@ -606,7 +649,3 @@ void RequestHandler::closeConnection(void) {
   }
     delete this;
 }
-
-// bool RequestHandler::getShouldBeDeleted() const {
-//   return shouldBeDeleted;
-// }

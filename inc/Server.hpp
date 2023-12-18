@@ -26,6 +26,7 @@ class Server {
 		long long getMaxClientBodySize() const;
 		Route getRoute(const std::string& path) const;
     ErrorPageManager getErrorPageManager() const;
+    const std::map<std::string, std::string>& getMimeTypes() const;
 
     //debug
     void printRoutes() const;
@@ -39,6 +40,7 @@ class Server {
 		bool customErrorPage;
 		long long maxClientBodySize;
 		std::map<std::string, Route> routes;
+    std::map<std::string, std::string> mimeTypes;
 };
 
 #endif

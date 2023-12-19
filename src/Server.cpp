@@ -6,7 +6,6 @@
 Server::Server()
 {
       this->host = "";
-      this->port = 0;
       this->serverName = "";
       this->customErrorPage = false;
       this->maxClientBodySize = 0;
@@ -23,9 +22,9 @@ void Server::setHost(const std::string& host)
 	    this->host = host;
 }
 
-void Server::setPort(int port)
-{
-	    this->port = port;
+
+void Server::setPorts(const std::vector<int>& ports) {
+  this->ports = ports;
 }
 
 void Server::setServerName(const std::string& name)
@@ -60,17 +59,18 @@ std::string Server::getHost() const
 	    return this->host;
 }
 
-int Server::getPort() const
-{
-	    return this->port;
+const std::vector<int>& Server::getPorts() const {
+  return this->ports;
 }
 
-std::string Server::getPortString() const
-{
+// Get ports as a comma-separated string
+std::string Server::getPortsString() const {
   std::stringstream ss;
-  ss << this->port;
-  std::string portString = ss.str();
-  return portString;
+  for (size_t i = 0; i < ports.size(); ++i) {
+    if (i > 0) ss << ",";
+    ss << ports[i];
+  }
+  return ss.str();
 }
 
 std::string Server::getServerName() const

@@ -135,22 +135,32 @@ void ConfigurationParser::parseHost(std::string& line, Server& serverConfig) {
 }
 
 void ConfigurationParser::parsePort(std::string& line, Server& serverConfig) {
-  std::istringstream iss(line);
-  std::string portStr;
-  iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
-  getline(iss, portStr);
-  if (portStr.empty())
-    throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
-  std::istringstream iss2(portStr);
-  int port;
-  ParsingUtils::trimAndLower(portStr);
-  if (ParsingUtils::containsAlpha(portStr))
-    throw ConfigurationParser::InvalidConfigurationException("Port cannot contain alpha characters");
-  iss2 >> port;
-  if (port < 1 || port > 65535)
-    throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
-  Logger::log(INFO, "Port: " + portStr);
-  serverConfig.setPort(port);
+    std::istringstream iss(line);
+    std::string portsStr;
+    iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');
+    getline(iss, portsStr);
+    if (portsStr.empty())
+        throw ConfigurationParser::InvalidConfigurationException("Port cannot be empty");
+
+    std::vector<int> ports;
+    std::stringstream ss(portsStr);
+    std::string portStr;
+    while (getline(ss, portStr, ',')) {
+        ParsingUtils::trimAndLower(portStr);
+        if (ParsingUtils::containsAlpha(portStr))
+            throw ConfigurationParser::InvalidConfigurationException("Port cannot contain alpha characters");
+
+        int port;
+        std::istringstream issPort(portStr);
+        issPort >> port;
+        if (port < 1 || port > 65535)
+            throw ConfigurationParser::InvalidConfigurationException("Invalid port: " + portStr);
+
+        ports.push_back(port);
+    }
+
+    Logger::log(INFO, "Ports: " + serverConfig.getPortsString());
+    serverConfig.setPorts(ports);
 }
 
 void ConfigurationParser::parseServerName(std::string &line, Server& serverConfig) 

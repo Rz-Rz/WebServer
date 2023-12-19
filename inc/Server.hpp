@@ -10,7 +10,7 @@ class Server {
 	public:
 		Server();
 		void setHost(const std::string& host);
-		void setPort(int port);
+    void setPorts(const std::vector<int>& ports);
 		void setServerName(const std::string& name);
 		void setErrorPage(int errorCode, const std::string& pagePath);
 		void hasCustomErrorPage(bool value);
@@ -18,8 +18,8 @@ class Server {
 		void addRoute(const std::string& path, const Route& route);
 
 		std::string getHost() const;
-		int getPort() const;
-    std::string getPortString() const;
+    const std::vector<int>& getPorts() const;
+    std::string getPortsString() const;
 		std::string getServerName() const;
 		std::string getErrorPage(int errorCode) const;
 		bool hasCustomErrorPage(void) const;
@@ -32,9 +32,11 @@ class Server {
     void printRoutes() const;
 
 	private:
+    Server(const Server& other);
+    Server& operator=(const Server& other);
 		std::string host;
     ErrorPageManager errorPageManager;
-		int port;
+    std::vector<int> ports;
 		std::string serverName;
 		std::map<int, std::string> errorPages;
 		bool customErrorPage;

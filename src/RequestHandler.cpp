@@ -46,6 +46,7 @@ void RequestHandler::handle_event(uint32_t events) {
         // Check if the entire request has been received
         if (parser.isCompleteRequest()) {
           Logger::log(INFO, "Received complete request");
+          // std::cout << "PARSED DATA" << std::endl << parser.requestData << std::endl << "END PARSED DATA" << std::endl;
           // Process the request
           RequestHandler::handleRequest(server);
           closeConnection();
@@ -213,6 +214,7 @@ void RequestHandler::handleFileRequest(const Route& route) {
     return;
   } else {
     sendErrorResponse(404);
+    
     Logger::log(ERROR, "404 - File not found: " + filePath);
     return;
   }
@@ -382,10 +384,22 @@ bool RequestHandler::isPayloadTooLarge(void) {
 
 std::string RequestHandler::extractFilename(const HTTPRequestParser& parser) {
     std::string uri = parser.getUri();
+
+    // Check if the URI ends with a slash - indicating a directory
+    if (!uri.empty() && uri.length() - 1 == '/') {
+        return "";
+    }
+
+    // Find the last slash position
     size_t lastSlashPos = uri.find_last_of('/');
-    if (lastSlashPos != std::string::npos) {
+    // Find the last dot position
+    size_t lastDotPos = uri.find_last_of('.');
+
+    // Check if a dot exists after the last slash - indicating a file
+    if (lastSlashPos != std::string::npos && lastDotPos != std::string::npos && lastDotPos > lastSlashPos) {
         return uri.substr(lastSlashPos + 1);
     }
+
     return "";
 }
 
@@ -400,6 +414,7 @@ std::string RequestHandler::getUploadDirectoryFromUri(const Route& route, const 
 
 void RequestHandler::handleFileUpload(const Route& route) {
   std::string filePath = getUploadDirectoryFromUri(route, parser.getUri());
+  bool multipartError = false;
   if (isPayloadTooLarge()) {
     return;
   }
@@ -418,17 +433,19 @@ void RequestHandler::handleFileUpload(const Route& route) {
     multipartParser.parse();
   } catch (const MultipartFormDataParser::MultipartFormDataParserException& e) {
     Logger::log(ERROR, std::string("Error parsing multipart form data: ") + e.what());
-    sendErrorResponse(500); // Internal Server Error
-    return;
+    multipartError = true;
   }
 
+
   // Extracting the filename and file content
-  const std::map<std::string, std::string>& fileFields = multipartParser.getFileFields();
-  if (fileFields.empty()) {
-    Logger::log(ERROR, "No files found in the request");
-    sendErrorResponse(400); // Bad Request
-    return;
+  if (!multipartError)
+  {
+    const std::map<std::string, std::string>& fileFields = multipartParser.getFileFields();
+    if (fileFields.empty()) {
+      Logger::log(ERROR, "No files found in the request");
+    }
   }
+ 
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "Directory does not exist: " + filePath);
@@ -443,7 +460,6 @@ void RequestHandler::handleFileUpload(const Route& route) {
   }
 
   filePath += getFilename(multipartParser);
-
   // Directory exists and is writable
   Logger::log(INFO, "File upload on POST request: " + filePath);
   std::string fileContent = parser.getBody();
@@ -544,6 +560,7 @@ void RequestHandler::handleDeleteRequest(const Server& server) {
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
+    std::cout  << "HERE !!" << std::endl;
     sendErrorResponse(404);
     return;
   }
@@ -584,7 +601,7 @@ std::string RequestHandler::getFilename(const MultipartFormDataParser& parser) {
   if (filename.empty()) {
     filename = extractFilename(this->parser);
     if (filename.empty()) {
-      filename = "untitled";
+      filename = "untitled.txt";
     }
   }
   return filename;

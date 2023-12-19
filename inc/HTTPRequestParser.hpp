@@ -9,7 +9,6 @@
 
 class HTTPRequestParser {
 private:
-    std::string requestData;
     std::string method;
     std::string uri;
     std::string httpVersion;
@@ -30,6 +29,7 @@ public:
     HTTPRequestParser();
 
     void appendData(const std::string& data);
+    std::string requestData;
 
     std::string getMethod() const;
     std::string getUri() const;

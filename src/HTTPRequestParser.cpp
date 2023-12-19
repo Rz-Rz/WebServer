@@ -81,7 +81,6 @@ void HTTPRequestParser::appendData(const std::string& data) {
     if (headersParsed && isContentLengthParsed) {
         if (requestData.length() >= contentLength) {
             extractBody();  // Assuming this method extracts the body from requestData
-            // Optionally, you can clear requestData here if you don't expect more data
         }
     }
 }

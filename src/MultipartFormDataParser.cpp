@@ -1,8 +1,6 @@
 #include "MultipartFormDataParser.hpp"
 #include <sstream>
 #include <iostream>
-
-
      
 MultipartFormDataParser::MultipartFormDataParser(const std::string& body, const std::string& boundary)
     : body(body), boundary(boundary) {}
@@ -43,41 +41,45 @@ void MultipartFormDataParser::parseDisposition(const std::string& disposition, s
     }
 }
 
-
 std::vector<std::string> MultipartFormDataParser::splitBodyByBoundary() {
     std::vector<std::string> parts;
-    std::string fullBoundary = boundary;
+    std::string fullBoundary = "--" + boundary;
     std::string boundaryTerminator = fullBoundary + "--";
-    size_t minimumValidPartSize = fullBoundary.length();
     size_t pos = 0;
 
     while ((pos = body.find(fullBoundary, pos)) != std::string::npos) {
         size_t start = pos + fullBoundary.length();
 
-        if (body[start] == '\r' && body[start + 1] == '\n') {
+        // Skip CRLF after the boundary
+        if (body.compare(start, 2, "\r\n") == 0) {
             start += 2;
         }
 
-        pos = body.find(fullBoundary, start);
-        if (pos == std::string::npos) {
-            pos = body.find(boundaryTerminator, start);
+        // Find the start of the next boundary or the terminator
+        size_t nextPos = body.find(fullBoundary, start);
+
+        // Adjust if a terminator is found
+        if (nextPos == std::string::npos) {
+            nextPos = body.find(boundaryTerminator, start);
         }
 
-        if (pos != std::string::npos) {
-            std::string token = body.substr(start, pos - start);
-            trim(token);
-
-            if (!token.empty() && token.size() > minimumValidPartSize) {
-                parts.push_back(token);
-            } else {
-                std::cout << "Discarded small or empty token" << std::endl;
-            }
-        } else {
-            std::cout << "Boundary terminator not found after position: " << start << std::endl;
+        // Handle the case where no further boundary is found
+        if (nextPos == std::string::npos) {
+            nextPos = body.length();
         }
+
+        std::string part = body.substr(start, nextPos - start);
+        trim(part);  // Ensure trim function is appropriate
+        if (!part.empty()) {
+            parts.push_back(part);
+        }
+
+        pos = nextPos;
     }
+
     return parts;
 }
+
 
 void MultipartFormDataParser::parsePart(const std::string& part) {
     // First, split the part into headers and content.
@@ -108,7 +110,7 @@ void MultipartFormDataParser::parsePart(const std::string& part) {
 
         if (!filename.empty()) {
             // It's a file field
-            fileFields["filename"] = filename;
+          fileFields["filename"] = filename;
         } else {
             // It's a regular form field
             formFields[name] = contentPart;

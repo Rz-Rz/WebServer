@@ -7,15 +7,15 @@
 0047: Accept: */*
 0054: Content-Length: 236
 0069: Content-Type: multipart/form-data; boundary=--------------------
-00a9: ----c660535dd9ba6349
+00a9: ----35db0d61604e1db8
 00bf: 
 => Send data, 236 bytes (0xec)
-0000: --------------------------c660535dd9ba6349
+0000: --------------------------35db0d61604e1db8
 002c: Content-Disposition: form-data; name="file"; filename="test.txt"
 006e: Content-Type: text/plain
 0088: 
 008a: this is a text <fieldset>.  as a test.</fieldset>.
-00be: --------------------------c660535dd9ba6349--
+00be: --------------------------35db0d61604e1db8--
 == Info: We are completely uploaded and fine
 == Info: Mark bundle as not supporting multiuse
 <= Recv header, 17 bytes (0x11)
@@ -24,8 +24,10 @@
 0000: Content-Type: text/html
 <= Recv header, 20 bytes (0x14)
 0000: Content-Length: 26
+<= Recv header, 19 bytes (0x13)
+0000: Connection: close
 <= Recv header, 2 bytes (0x2)
 0000: 
 <= Recv data, 26 bytes (0x1a)
 0000: File uploaded successfully
-== Info: Connection #0 to host 127.0.0.1 left intact
+== Info: Closing connection 0

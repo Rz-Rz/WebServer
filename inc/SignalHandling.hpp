@@ -1,9 +1,8 @@
 #include <csignal>
-#include <iostream>
-
-#include <csignal>
 #include <cstdlib>  // For exit
 #include <iostream>
+#include <map>
+#include "Server.hpp"
 
 class SignalHandler {
 public:
@@ -21,13 +20,24 @@ public:
     // Cleanup and shutdown logic
     void cleanup() {
         std::cout << "Cleaning up resources..." << std::endl;
+        if (serversMap) {
+            for (std::map<std::string, Server*>::iterator it = serversMap->begin(); it != serversMap->end(); ++it) {
+                delete it->second; // Free Server instances
+            }
+            serversMap->clear();
+        }
         // Implement resource cleanup here
+    }
+
+    void setServersMap(std::map<std::string, Server*>* map) {
+      serversMap = map;
     }
 
 private:
     // Private Constructor and Destructor
     SignalHandler() {}
     ~SignalHandler() {}
+    std::map<std::string, Server*>* serversMap;
 
     // Private copy constructor and assignment operator to prevent copying
     SignalHandler(const SignalHandler&);

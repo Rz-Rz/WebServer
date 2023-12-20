@@ -11,7 +11,7 @@
 #include "Reactor.hpp"
 #include "Logger.hpp"
 
-AcceptHandler::AcceptHandler(int fd, Reactor &reactor, Server &server) : listen_fd(fd), reactor(reactor), server(server) {}
+AcceptHandler::AcceptHandler(int fd, Reactor &reactor, Server *server) : listen_fd(fd), reactor(reactor), server(server) {}
 
 void AcceptHandler::handle_event(uint32_t /*events*/) {
   Logger::log(INFO, "Accepting a connection");

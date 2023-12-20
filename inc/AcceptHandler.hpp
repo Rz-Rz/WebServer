@@ -10,10 +10,10 @@ class AcceptHandler : public EventHandler {
 	private:
 		int listen_fd;
     Reactor& reactor;
-    Server& server;
+    Server* server;
 
 	public:
-		explicit AcceptHandler(int fd, Reactor& reactor, Server& server);
+		explicit AcceptHandler(int fd, Reactor& reactor, Server* server);
 		void handle_event(uint32_t events);
 		int get_handle() const;
 };

@@ -20,7 +20,8 @@ class ConfigurationParser {
 	public:
 		ConfigurationParser();
 		~ConfigurationParser();
-		static std::map<std::string, Server> parse(const std::string& filename);
+		// static std::map<std::string, Server> parse(const std::string& filename);
+    static std::map<std::string, Server*> parse(const std::string& filename);
 
 		// Server Parsing
     static void parseServerConfig(std::string& line, Server& serverConfig);

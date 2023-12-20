@@ -14,8 +14,7 @@
 #include "SystemUtils.hpp"
 #include <sys/wait.h>
 
-RequestHandler::RequestHandler(int fd, Server& serverInstance) : client_fd(fd), server(serverInstance) {
-}
+RequestHandler::RequestHandler(int fd, Server* serverInstance) : client_fd(fd), server(serverInstance) {}
 
 RequestHandler::~RequestHandler() {
   SystemUtils::closeUtil(client_fd);
@@ -103,9 +102,9 @@ std::string RequestHandler::getFilePathFromUri(const Route& route, const std::st
 }
 
 void RequestHandler::sendErrorResponse(int errorCode) {
-  std::string errorPageContent = server.getErrorPageManager().getErrorPage(errorCode);
+  std::string errorPageContent = server->getErrorPageManager().getErrorPage(errorCode);
   std::ostringstream responseStream;
-  responseStream << "HTTP/1.1 " << errorCode << " " << server.getErrorPageManager().errorCodeMessageParser(errorCode) << "\r\n";
+  responseStream << "HTTP/1.1 " << errorCode << " " << server->getErrorPageManager().errorCodeMessageParser(errorCode) << "\r\n";
   responseStream << "Content-Type: text/html\r\n";
   responseStream << "Content-Length: " << errorPageContent.size() << "\r\n";
   // Inform the client that the connection will be closed after the response
@@ -235,11 +234,11 @@ std::string RequestHandler::endWithSlash(const std::string& uri) {
   return uri;
 }
 
-void RequestHandler::handleGetRequest(const Server& server) {
+void RequestHandler::handleGetRequest(const Server* server) {
   std::string filePath = extractDirectoryPath(parser.getUri());
   Route route;
   try {
-    route = server.getRoute(filePath);
+    route = server->getRoute(filePath);
   } catch (const std::out_of_range& e) {
     // No route found for this URI
     sendErrorResponse(404);
@@ -373,7 +372,7 @@ bool RequestHandler::isPayloadTooLarge(void) {
     long long contentLength = 0;
     if (!contentLengthHeader.empty()) {
         contentLength = std::atoll(contentLengthHeader.c_str());
-        if (contentLength > server.getMaxClientBodySize()) {
+        if (contentLength > server->getMaxClientBodySize()) {
             sendErrorResponse(413);
             Logger::log(ERROR, "413 - Payload too large: " + contentLengthHeader);
             return true; // Payload is too large
@@ -475,11 +474,11 @@ void RequestHandler::handleFileUpload(const Route& route) {
   return;
 }
 
-void RequestHandler::handlePostRequest(const Server& server) {
+void RequestHandler::handlePostRequest(const Server* server) {
   Route route;
   
   try {
-    route = server.getRoute(parser.getUri());
+    route = server->getRoute(parser.getUri());
   } catch (const std::out_of_range& e) {
     sendErrorResponse(404);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
@@ -540,11 +539,11 @@ std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
     return pathWithoutQuery;
 }
 
-void RequestHandler::handleDeleteRequest(const Server& server) {
+void RequestHandler::handleDeleteRequest(const Server* server) {
   Route route;
   std::string filePath = extractDirectoryPath(parser.getUri());
   try {
-    route = server.getRoute(filePath);
+    route = server->getRoute(filePath);
   } catch (const std::out_of_range& e) {
     sendErrorResponse(404);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
@@ -584,7 +583,11 @@ void RequestHandler::handleDeleteRequest(const Server& server) {
   return;
 }
 
-void RequestHandler::handleRequest(const Server& server) {
+void RequestHandler::handleRequest(const Server* server) {
+  if (server == NULL) {
+    Logger::log(ERROR, "Server is NULL");
+    return;
+  }
   Route route;
   if (parser.getMethod() == "GET") {
     handleGetRequest(server);

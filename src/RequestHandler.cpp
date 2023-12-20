@@ -29,7 +29,7 @@ void RequestHandler::handle_event(uint32_t events) {
       if (bytes_read > 0) {
         try {
           parser.appendData(std::string(buffer, bytes_read));
-          // std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
+          std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
           Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
           sendErrorResponse(505);

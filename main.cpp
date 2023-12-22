@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
 #include "Reactor.hpp"
@@ -9,6 +10,7 @@
 #include <cerrno>
 #include "ConfigurationParser.hpp"
 #include "SignalHandling.hpp"
+#include "ServerManager.hpp"
 
 
 int main(int argc, char** argv) {
@@ -31,6 +33,7 @@ int main(int argc, char** argv) {
         std::cerr << "Configuration error: " << e.what() << std::endl;
         return 1;
     }
+    ServerManager::getInstance().setServersMap(&servers);
     std::cout << "Number of servers to process: " << servers.size() << std::endl;
     for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
       Server* serverConfig = it->second;
@@ -55,7 +58,12 @@ int main(int argc, char** argv) {
         sockaddr_in serv_addr = {};
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_port = htons(port);
-        serv_addr.sin_addr.s_addr = INADDR_ANY;
+        // Check if a specific host IP is configured
+        if (!serverConfig->getHost().empty())
+          // Convert and set the specified IP address
+          serv_addr.sin_addr.s_addr = inet_addr(serverConfig->getHost().c_str());
+        else
+          serv_addr.sin_addr.s_addr = INADDR_ANY;
 
         // Allow socket reuse
         int opt = 1;

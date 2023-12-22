@@ -127,12 +127,14 @@ void ConfigurationParser::parseHost(std::string& line, Server& serverConfig) {
   std::string host;
   iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');  
   getline(iss, host);  // Read the rest into value
-  if (host.empty()) {
-    throw ConfigurationParser::InvalidConfigurationException("Host cannot be empty");
-  }
+  if (host.empty())
+    return;
   ParsingUtils::trimAndLower(host);
   if (ParsingUtils::isValidIPv4(host) == false)
-    throw ConfigurationParser::InvalidConfigurationException("Invalid host: " + host);
+  {
+    Logger::log(WARNING, "Invalid host: " + host + ", reverting to default.");
+    return;
+  }
   Logger::log(INFO, "Host: " + host);
   serverConfig.setHost(host);
 }

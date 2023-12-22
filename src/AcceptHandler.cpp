@@ -25,7 +25,7 @@ void AcceptHandler::handle_event(uint32_t /*events*/) {
   {
     Logger::log(INFO, "Registering handler for connection");
     // Create and register a RequestHandler for this client_fd
-    EventHandler* handler = new RequestHandler(client_fd, server); // Remember to manage memory
+    EventHandler* handler = new RequestHandler(client_fd); // Remember to manage memory
     reactor.register_handler(handler);
   }
 }

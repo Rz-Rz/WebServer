@@ -127,7 +127,7 @@ std::string HTTPRequestParser::getHttpVersion() const {
 }
 
 std::string HTTPRequestParser::getHeader(const std::string& headerName) const {
-  std::map<std::string, std::string>::const_iterator it = headers.find(headerName);
+  std::map<std::string, std::string>::const_iterator it = headers.find(ParsingUtils::toLower(headerName));
   if (it != headers.end()) {
     return it->second;
   }

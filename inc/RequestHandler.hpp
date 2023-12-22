@@ -10,7 +10,6 @@ class RequestHandler : public EventHandler {
   private: 
     int client_fd;
     HTTPRequestParser parser;
-    Server* server;
 
     void sendRedirectResponse(const std::string& redirectLocation);
     void sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content);
@@ -18,14 +17,14 @@ class RequestHandler : public EventHandler {
     void handlePostRequest(const Server* server);
     void handleDeleteRequest(const Server* server);
     void handleRedirect(const Route& route);
-    void handleDirectoryRequest(const Route& route);
-    void handleFileRequest(const Route& route);
-    void handleFileUpload(const Route& route);
-    void handleCGIRequest(const Route& route);
+    void handleDirectoryRequest(const Route& route, const Server* server);
+    void handleFileRequest(const Route& route, const Server* server);
+    void handleFileUpload(const Route& route, const Server* server);
+    void handleCGIRequest(const Route& route, const Server* server);
     void setCGIEnvironment(const std::string& queryString);
     void closeConnection(void);
     std::string executeCGI(const std::string& filePath);
-    bool isPayloadTooLarge(void);
+    bool isPayloadTooLarge(const Server* server);
     std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath);
     std::string extractFilename(const HTTPRequestParser& parser);
     std::string getFilename(const MultipartFormDataParser& parser);
@@ -34,10 +33,11 @@ class RequestHandler : public EventHandler {
     std::string removeQueryString(const std::string& uri);
     std::string extractRouteFromUri(const std::string& uri);
     std::string endWithSlash(const std::string& uri);
+    Server* findServerForHost(const std::string& host, const std::map<std::string, Server*>* serversMap);
 
   public:
     RequestHandler();
-    explicit RequestHandler(int fd, Server* server);
+    explicit RequestHandler(int fd);
     virtual ~RequestHandler();
 
     void handle_event(uint32_t events);
@@ -45,7 +45,7 @@ class RequestHandler : public EventHandler {
     std::string getFilePathFromUri(const Route& route, const std::string& uri);
     std::string getUploadDirectoryFromUri(const Route& route, const std::string& uri);
     int get_handle() const;
-    void sendErrorResponse(int errorCode);
+    void sendErrorResponse(int errorCode, const Server* server);
     std::string extractDirectoryPath(const std::string& filePath);
     std::string getMimeType(const std::string& filePath);
     // bool getShouldBeDeleted(void) const;

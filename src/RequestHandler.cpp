@@ -13,8 +13,9 @@
 #include "MultipartFormDataParser.hpp"
 #include "SystemUtils.hpp"
 #include <sys/wait.h>
+#include "ServerManager.hpp"
 
-RequestHandler::RequestHandler(int fd, Server* serverInstance) : client_fd(fd), server(serverInstance) {}
+RequestHandler::RequestHandler(int fd) : client_fd(fd) {}
 
 RequestHandler::~RequestHandler() {
   SystemUtils::closeUtil(client_fd);
@@ -32,23 +33,31 @@ void RequestHandler::handle_event(uint32_t events) {
           std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
           Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
-          sendErrorResponse(505);
+          sendErrorResponse(505, NULL);
           closeConnection();
           break;
         }
         catch (const HTTPRequestParser::InvalidMethodException& e) {
           Logger::log(ERROR, "Error Parsing HTTP Request: " + std::string(e.what()));
-          sendErrorResponse(405);
+          sendErrorResponse(405, NULL);
           closeConnection();
           break;
         }
         // Check if the entire request has been received
         if (parser.isCompleteRequest()) {
-          Logger::log(INFO, "Received complete request");
           // std::cout << "PARSED DATA" << std::endl << parser.requestData << std::endl << "END PARSED DATA" << std::endl;
-          // Process the request
-          RequestHandler::handleRequest(server);
-          closeConnection();
+          Logger::log(INFO, "Received complete request");
+          Server* server = findServerForHost(parser.getHeader("Host"), ServerManager::getInstance().getServersMap());
+          if (server == NULL)
+          {
+            Logger::log(ERROR, "No matching server found for request:" + parser.getUri());
+            sendErrorResponse(400, NULL);
+            closeConnection();
+          }
+          else {
+            RequestHandler::handleRequest(server);
+            closeConnection();
+          }
           break;
         }
       }
@@ -74,6 +83,43 @@ void RequestHandler::handle_event(uint32_t events) {
     }
   }
 }
+
+Server* RequestHandler::findServerForHost(const std::string& host, const std::map<std::string, Server*>* serversMap) {
+    // Extract the hostname or IP from the host header, excluding the port
+    std::string parsedHost;
+    size_t colonPos = host.find(':');
+    if (colonPos != std::string::npos) {
+        parsedHost = host.substr(0, colonPos);
+    } else {
+        parsedHost = host;
+    }
+
+    // Check if the host header is an IP address
+    bool isIpAddress = ParsingUtils::isValidIPv4(parsedHost);
+
+    // Iterating through the map to find the server with a matching host or server name
+    for (std::map<std::string, Server*>::const_iterator it = serversMap->begin(); it != serversMap->end(); ++it) {
+        Server* server = it->second;
+        if (server != NULL) {
+            std::string serverHost = server->getHost();
+            // If host header is an IP address
+            if (isIpAddress) {
+                // Match if server's host is empty or matches the parsed host
+                if (serverHost.empty() || parsedHost == serverHost) {
+                    return server;
+                }
+            }
+            // If host header is not an IP address, compare with server's name
+            else if (parsedHost == server->getServerName()) {
+                return server;
+            }
+        }
+    }
+
+    // Return nullptr if no match is found
+    return NULL;
+}
+
 
 int RequestHandler::get_handle() const {
   return client_fd;
@@ -101,13 +147,24 @@ std::string RequestHandler::getFilePathFromUri(const Route& route, const std::st
     return filePath;
 }
 
-void RequestHandler::sendErrorResponse(int errorCode) {
-  std::string errorPageContent = server->getErrorPageManager().getErrorPage(errorCode);
+void RequestHandler::sendErrorResponse(int errorCode, const Server* server) {
+  std::string errorPageContent;
+  std::string errorMessage;
+  if (server != NULL)
+  {
+    errorPageContent = server->getErrorPageManager().getErrorPage(errorCode);
+    errorMessage = server->getErrorPageManager().errorCodeMessageParser(errorCode);
+  } else {
+    // Default error message and content
+    std::ostringstream errorContentStream;
+    errorContentStream << "<html><body><h1>Error " << errorCode << "</h1></body></html>";
+    errorPageContent = errorContentStream.str();
+    errorMessage = "Error"; // Generic error message
+  }
   std::ostringstream responseStream;
-  responseStream << "HTTP/1.1 " << errorCode << " " << server->getErrorPageManager().errorCodeMessageParser(errorCode) << "\r\n";
+  responseStream << "HTTP/1.1 " << errorCode << " " << errorMessage << "\r\n";  // Use errorMessage
   responseStream << "Content-Type: text/html\r\n";
   responseStream << "Content-Length: " << errorPageContent.size() << "\r\n";
-  // Inform the client that the connection will be closed after the response
   responseStream << "Connection: close\r\n";
   responseStream << "\r\n";
   responseStream << errorPageContent;
@@ -139,17 +196,17 @@ void RequestHandler::handleRedirect(const Route& route) {
   Logger::log(INFO, "Redirecting to: " + route.getRedirectLocation());
 }
 
-void RequestHandler::handleDirectoryRequest(const Route& route)
+void RequestHandler::handleDirectoryRequest(const Route& route, const Server* server)
 {
       std::string directoryPath = getFilePathFromUri(route, parser.getUri());
       if (!ParsingUtils::doesPathExist(directoryPath)) {
         Logger::log(ERROR, "Directory does not exist: " + directoryPath);
-        sendErrorResponse(403);
+        sendErrorResponse(403, server);
         return;
       }
       if (!ParsingUtils::hasReadPermissions(directoryPath)) {
         Logger::log(ERROR, "Directory is not readable: " + directoryPath);
-        sendErrorResponse(403);
+        sendErrorResponse(403, server);
         return;
       }
       // Directory exists and is readable
@@ -159,7 +216,7 @@ void RequestHandler::handleDirectoryRequest(const Route& route)
         contents = ParsingUtils::getDirectoryContents(directoryPath);
       } catch (const std::exception& e) {
         Logger::log(ERROR, "500 - Error reading directory contents: " + std::string(e.what()));
-        sendErrorResponse(500);
+        sendErrorResponse(500, server);
         return;
       }
       std::string directoryListingPage = generateDirectoryListingPage(contents, parser.getUri());
@@ -198,11 +255,11 @@ std::string RequestHandler::getMimeType(const std::string& filePath) {
     return "application/octet-stream";
 }
 
-void RequestHandler::handleFileRequest(const Route& route) {
+void RequestHandler::handleFileRequest(const Route& route, const Server* server) {
   std::string filePath = getFilePathFromUri(route, parser.getUri());
   if (ParsingUtils::isDirectory(filePath))
   {
-    sendErrorResponse(403);
+    sendErrorResponse(403, server);
     Logger::log(ERROR, "403 - Directory listing is not enabled: " + filePath);
     return;
   }
@@ -212,7 +269,7 @@ void RequestHandler::handleFileRequest(const Route& route) {
     Logger::log(INFO, "File request on GET request: " + filePath); 
     return;
   } else {
-    sendErrorResponse(404);
+    sendErrorResponse(404, server);
     
     Logger::log(ERROR, "404 - File not found: " + filePath);
     return;
@@ -241,13 +298,13 @@ void RequestHandler::handleGetRequest(const Server* server) {
     route = server->getRoute(filePath);
   } catch (const std::out_of_range& e) {
     // No route found for this URI
-    sendErrorResponse(404);
+    sendErrorResponse(404, server);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
   if (!route.getGetMethod()) {
     // Method not allowed for this route
-    sendErrorResponse(405);
+    sendErrorResponse(405, server);
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
@@ -256,15 +313,15 @@ void RequestHandler::handleGetRequest(const Server* server) {
     return;
   }
   else if (route.getDirectoryListing() && !route.getHasDefaultFile()) {
-    handleDirectoryRequest(route);
+    handleDirectoryRequest(route, server);
     return;
   }
   else if (route.getHasCGI()) {
-    handleCGIRequest(route);
+    handleCGIRequest(route, server);
     return;
   }
   else {
-    handleFileRequest(route);
+    handleFileRequest(route, server);
     return;
   }
 }
@@ -281,26 +338,26 @@ std::string RequestHandler::removeQueryString(const std::string& uri) {
   return uri;
 }
 
-void RequestHandler::handleCGIRequest(const Route& route) {
+void RequestHandler::handleCGIRequest(const Route& route, const Server* server) {
   std::string queryString = extractQueryString(parser.getUri());
   std::string filePath = getFilePathFromUri(route, parser.getUri());
   filePath = removeQueryString(filePath);
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
-    sendErrorResponse(404);
+    sendErrorResponse(404, server);
     return;
   }
 
   if (!ParsingUtils::hasReadPermissions(filePath)) {
     Logger::log(ERROR, "403 - File is not readable: " + filePath);
-    sendErrorResponse(403);
+    sendErrorResponse(403, server);
     return;
   }
 
   if (!ParsingUtils::hasExecutePermissions(filePath)) {
     Logger::log(ERROR, "403 - File is not executable: " + filePath);
-    sendErrorResponse(403);
+    sendErrorResponse(403, server);
     return;
   }
   setCGIEnvironment(queryString);
@@ -367,13 +424,13 @@ std::string RequestHandler::extractQueryString(const std::string& uri) {
     return "";
 }
 
-bool RequestHandler::isPayloadTooLarge(void) {
+bool RequestHandler::isPayloadTooLarge(const Server* server) {
     std::string contentLengthHeader = parser.getHeader("Content-Length");
     long long contentLength = 0;
     if (!contentLengthHeader.empty()) {
         contentLength = std::atoll(contentLengthHeader.c_str());
         if (contentLength > server->getMaxClientBodySize()) {
-            sendErrorResponse(413);
+            sendErrorResponse(413, server);
             Logger::log(ERROR, "413 - Payload too large: " + contentLengthHeader);
             return true; // Payload is too large
         }
@@ -411,10 +468,10 @@ std::string RequestHandler::getUploadDirectoryFromUri(const Route& route, const 
   return uploadDir;
 }
 
-void RequestHandler::handleFileUpload(const Route& route) {
+void RequestHandler::handleFileUpload(const Route& route, const Server* server) {
   std::string filePath = getUploadDirectoryFromUri(route, parser.getUri());
   bool multipartError = false;
-  if (isPayloadTooLarge()) {
+  if (isPayloadTooLarge(server)) {
     return;
   }
 
@@ -423,7 +480,7 @@ void RequestHandler::handleFileUpload(const Route& route) {
 
   if (boundary.empty()) {
     Logger::log(ERROR, "400 - No boundary found in multipart form data");
-    sendErrorResponse(400); // Bad Request
+    sendErrorResponse(400, server); // Bad Request
     return;
   }
 
@@ -435,7 +492,6 @@ void RequestHandler::handleFileUpload(const Route& route) {
     multipartError = true;
   }
 
-
   // Extracting the filename and file content
   if (!multipartError)
   {
@@ -444,17 +500,16 @@ void RequestHandler::handleFileUpload(const Route& route) {
       Logger::log(ERROR, "No files found in the request");
     }
   }
- 
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "Directory does not exist: " + filePath);
-    sendErrorResponse(403);
+    sendErrorResponse(403, server);
     return;
   }
 
   if (!ParsingUtils::hasWritePermissions(filePath)) {
     Logger::log(ERROR, "Directory is not writable: " + filePath);
-    sendErrorResponse(403);
+    sendErrorResponse(403, server);
     return;
   }
 
@@ -465,7 +520,7 @@ void RequestHandler::handleFileUpload(const Route& route) {
   std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
   if (!fileStream) {
     Logger::log(ERROR, "500 - Error opening file for writing: " + filePath);
-    sendErrorResponse(500);
+    sendErrorResponse(500, server);
     return;
   }
   fileStream << fileContent;
@@ -480,34 +535,21 @@ void RequestHandler::handlePostRequest(const Server* server) {
   try {
     route = server->getRoute(parser.getUri());
   } catch (const std::out_of_range& e) {
-    sendErrorResponse(404);
+    sendErrorResponse(404, server);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
 
   if (!route.getPostMethod()) {
-    sendErrorResponse(405);
+    sendErrorResponse(405, server);
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
 
   if (route.getAllowFileUpload()) {
-    handleFileUpload(route);
+    handleFileUpload(route, server);
   }
 }
-
-// std::string RequestHandler::getMimeType(const std::string& filePath) {
-//     size_t dotPos = filePath.find_last_of('.');
-//     if (dotPos != std::string::npos) {
-//         std::string extension = filePath.substr(dotPos + 1);
-//         const std::map<std::string, std::string>& mimeTypes = server.getMimeTypes();
-//         std::map<std::string, std::string>::const_iterator it = mimeTypes.find(extension);
-//         if (it != mimeTypes.end()) {
-//             return it->second;
-//         }
-//     }
-//     return "application/octet-stream";
-// }
 
 std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
     if (filePath.empty()) {
@@ -545,22 +587,21 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
   try {
     route = server->getRoute(filePath);
   } catch (const std::out_of_range& e) {
-    sendErrorResponse(404);
+    sendErrorResponse(404, server);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
 
   filePath = getFilePathFromUri(route, parser.getUri());
   if (!route.getDeleteMethod()) {
-    sendErrorResponse(405);
+    sendErrorResponse(405, server);
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
-    std::cout  << "HERE !!" << std::endl;
-    sendErrorResponse(404);
+    sendErrorResponse(404, server);
     return;
   }
 
@@ -569,13 +610,13 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
   //check if write and execute permissions are set in the directory in order to delete file.
   if (!ParsingUtils::hasWriteAndExecutePermissions(dir)) {
     Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + dir);
-    sendErrorResponse(403);
+    sendErrorResponse(403, server);
     return;
   }
 
   if (unlink(filePath.c_str()) != 0) {
     Logger::log(ERROR, "500 - Error deleting file: " + filePath);
-    sendErrorResponse(500);
+    sendErrorResponse(500, server);
     return;
   }
 

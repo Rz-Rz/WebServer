@@ -76,7 +76,7 @@ bool ParsingUtils::simpleMatcher(const std::string& str, const std::string& toFi
 
 
 
-std::string ParsingUtils::toLower(std::string& str) {
+std::string ParsingUtils::toLower(const std::string& str) {
     std::string lowerStr = str;
     std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
     return lowerStr;

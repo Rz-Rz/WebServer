@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include "Server.hpp"
+#include "EventHandler.hpp"
 
 class SignalHandler {
   public:
@@ -16,6 +17,9 @@ class SignalHandler {
 
     void setServersMap(std::map<std::string, Server*>* map);
 
+    void registerResource(EventHandler* resource);
+    void deregisterResource(EventHandler* resource);
+
 private:
     // Private Constructor and Destructor
     SignalHandler() {}
@@ -28,4 +32,6 @@ private:
 
     // Static signal handling function
     static void handleSignal(int signal);
+
+    std::vector<EventHandler*> resources;
 };

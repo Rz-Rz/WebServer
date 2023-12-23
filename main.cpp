@@ -28,15 +28,15 @@ int main(int argc, char** argv) {
   try {
     servers = ConfigurationParser::parse(argv[1]);
     ConfigurationParser::checkValidity(servers);
-    ServerManager::getInstance().setServersMap(&servers);
     Logger::log(INFO, "Configuration file parsed successfully");
   } catch (const std::exception& e) {
     ConfigurationParser::cleanupServers(servers);
     Logger::log(ERROR, "Configuration error: " + std::string(e.what()));
     return 1;
   }
-    std::cout << "Number of servers to process: " << servers.size() << std::endl;
-    for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
+  std::cout << "Number of servers to process: " << servers.size() << std::endl;
+  SignalHandler::getInstance().setServersMap(&servers);
+  for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
       Server* serverConfig = it->second;
       std::cout << "Processing server: " << serverConfig->getServerName() << " with routes:" << std::endl;
       serverConfig->printRoutes();
@@ -93,6 +93,7 @@ int main(int argc, char** argv) {
 
         // Create and register an AcceptHandler for this server_fd
         AcceptHandler* handler = new AcceptHandler(server_fd, reactor, serverConfig); // Manage memory carefully
+        SignalHandler::getInstance().registerResource(handler);
         reactor.register_handler(handler);
       }
     }

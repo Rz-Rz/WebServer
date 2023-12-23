@@ -9,7 +9,7 @@
 #include "Logger.hpp"
 #include <cerrno>
 #include "ConfigurationParser.hpp"
-#include "SignalHandling.hpp"
+#include "SignalHandler.hpp"
 #include "ServerManager.hpp"
 
 
@@ -17,28 +17,29 @@ int main(int argc, char** argv) {
   SignalHandler::getInstance().setupSignalHandlers();
   Logger::log(INFO, "Server starting");
 
-    if (argc != 2) {
-        Logger::log(ERROR, "Usage error. Correct format: <executable> <config_file>");
-        std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
-        return 1;
-    }
+  if (argc != 2) {
+    Logger::log(ERROR, "Usage error. Correct format: <executable> <config_file>");
+    std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
+    return 1;
+  }
 
-    std::map<std::string, Server*> servers;
-    Reactor reactor;
-    try {
-        servers = ConfigurationParser::parse(argv[1]);
-        Logger::log(INFO, "Configuration file parsed successfully");
-    } catch (const std::exception& e) {
-        Logger::log(ERROR, "Configuration error: " + std::string(e.what()));
-        std::cerr << "Configuration error: " << e.what() << std::endl;
-        return 1;
-    }
+  std::map<std::string, Server*> servers;
+  Reactor reactor;
+  try {
+    servers = ConfigurationParser::parse(argv[1]);
+    ConfigurationParser::checkValidity(servers);
     ServerManager::getInstance().setServersMap(&servers);
+    Logger::log(INFO, "Configuration file parsed successfully");
+  } catch (const std::exception& e) {
+    ConfigurationParser::cleanupServers(servers);
+    Logger::log(ERROR, "Configuration error: " + std::string(e.what()));
+    return 1;
+  }
     std::cout << "Number of servers to process: " << servers.size() << std::endl;
     for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
       Server* serverConfig = it->second;
+      std::cout << "Processing server: " << serverConfig->getServerName() << " with routes:" << std::endl;
       serverConfig->printRoutes();
-      std::cout << "Processing server: " << serverConfig->getServerName() << std::endl;
 
       // Iterate over each port in the server configuration
       const std::vector<int>& ports = serverConfig->getPorts();

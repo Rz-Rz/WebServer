@@ -43,6 +43,13 @@ class ConfigurationParser {
 		static void parseAllowFileUpload(std::string& line, Route& route);
 		static void parseUploadLocation(std::string& line, Route& route);
 
+    static void checkForDuplicateServerNames(const std::map<std::string, Server*>& servers);
+    static void checkForDuplicatePorts(const std::map<std::string, Server*>& servers);
+    static void checkForDuplicateRoutes(const std::map<std::string, Server*>& servers);
+    static void checkValidity(const std::map<std::string, Server*>& servers);
+
+    static void cleanupServers(std::map<std::string, Server*>& servers);
+
 		// Exception
 		class InvalidConfigurationException : public std::exception {
 			public:

@@ -66,9 +66,11 @@ const std::vector<int>& Server::getPorts() const {
 // Get ports as a comma-separated string
 std::string Server::getPortsString() const {
   std::stringstream ss;
-  for (size_t i = 0; i < ports.size(); ++i) {
-    if (i > 0) ss << ",";
-    ss << ports[i];
+  for (std::vector<int>::const_iterator it = this->ports.begin(); it != this->ports.end(); ++it) {
+    ss << *it;
+    if (it != this->ports.end() - 1) {
+      ss << ",";
+    }
   }
   return ss.str();
 }
@@ -120,4 +122,9 @@ void Server::printRoutes() const
     std::cout << "Route: " << it->first << std::endl;
     RouteDebug::printRouteInfo(it->second);
   }
+}
+
+std::map<std::string, Route> Server::getRoutes() const
+{
+  return this->routes;
 }

@@ -25,6 +25,7 @@ class Server {
 		bool hasCustomErrorPage(void) const;
 		long long getMaxClientBodySize() const;
 		Route getRoute(const std::string& path) const;
+    std::map<std::string, Route> getRoutes() const;
     ErrorPageManager getErrorPageManager() const;
     const std::map<std::string, std::string>& getMimeTypes() const;
 

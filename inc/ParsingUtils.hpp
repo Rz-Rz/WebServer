@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 
 
 class ParsingUtils {
@@ -38,6 +39,15 @@ class ParsingUtils {
 
     // url Utils
     static bool isAbsoluteUrl(const std::string& url);
+
+    //template
+    template <typename T>
+      static std::string toString(const T& value) {
+        std::ostringstream oss;
+        oss << value;
+        return oss.str();
+    }
+
 
 	private:
 		ParsingUtils();

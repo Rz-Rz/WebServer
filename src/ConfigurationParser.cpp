@@ -46,7 +46,10 @@ std::map<std::string, Server*> ConfigurationParser::parse(const std::string& fil
           isParsingRoute = false;
         }
         // Save the previously parsed server configuration
-        parsedConfigs.insert(std::pair<std::string, Server*>(currentServerConfig->getServerName(), currentServerConfig));
+        if (!(parsedConfigs.insert(std::make_pair(currentServerConfig->getServerName(), currentServerConfig)).second)) {
+          Logger::log(ERROR, "Duplicate server name: " + currentServerConfig->getServerName());
+          delete currentServerConfig; // Important to avoid memory leak
+        }
         currentServerConfig = new Server(); // Create a new Server object for the next server
       }
       isParsingServer = true;
@@ -74,11 +77,22 @@ std::map<std::string, Server*> ConfigurationParser::parse(const std::string& fil
     currentServerConfig->addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
   }
   if (isParsingServer) {
-    parsedConfigs.insert(std::pair<std::string, Server*>(currentServerConfig->getServerName(), currentServerConfig));
+    if (!(parsedConfigs.insert(std::make_pair(currentServerConfig->getServerName(), currentServerConfig)).second)) {
+      Logger::log(ERROR, "Duplicate server name: " + currentServerConfig->getServerName());
+      delete currentServerConfig; // Important to avoid memory leak
+    }
   } else {
     delete currentServerConfig; // Delete if not used
   }
+
   return parsedConfigs;
+}
+
+void ConfigurationParser::checkValidity(const std::map<std::string, Server*>& servers)
+{
+  ConfigurationParser::checkForDuplicateServerNames(servers);
+  ConfigurationParser::checkForDuplicatePorts(servers);
+  ConfigurationParser::checkForDuplicateRoutes(servers);
 }
 
 void ConfigurationParser::parseServerConfig(std::string& line, Server& serverConfig) {
@@ -164,8 +178,8 @@ void ConfigurationParser::parsePort(std::string& line, Server& serverConfig) {
         ports.push_back(port);
     }
 
-    Logger::log(INFO, "Ports: " + serverConfig.getPortsString());
     serverConfig.setPorts(ports);
+    Logger::log(INFO, "Ports: " + serverConfig.getPortsString());
 }
 
 void ConfigurationParser::parseServerName(std::string &line, Server& serverConfig) 
@@ -557,3 +571,58 @@ void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
   Logger::log(INFO, "Upload location: " + location + " for route " + route.getRoutePath());
   route.setUploadLocation(location);
 }
+
+void ConfigurationParser::checkForDuplicatePorts(const std::map<std::string, Server *> &servers)
+{
+  std::set<int> usedPorts;
+  for (std::map<std::string, Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
+    const std::vector<int>& ports = it->second->getPorts();
+    for (std::vector<int>::const_iterator portIt = ports.begin(); portIt != ports.end(); ++portIt) {
+      int port = *portIt;
+      if (usedPorts.find(port) != usedPorts.end()) {
+        Logger::log(ERROR, "Duplicate port: " + ParsingUtils::toString(port));
+        throw ConfigurationParser::InvalidConfigurationException("Duplicate port: " + ParsingUtils::toString(port));
+      }
+      usedPorts.insert(port);
+    }
+  }
+}
+
+void ConfigurationParser::checkForDuplicateServerNames(const std::map<std::string, Server*>& servers)
+{
+  std::set<std::string> usedServerNames;
+  for (std::map<std::string, Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
+    const std::string& serverName = it->second->getServerName();
+    if (usedServerNames.find(serverName) != usedServerNames.end()) {
+      Logger::log(ERROR, "Duplicate server name: " + serverName);
+      throw ConfigurationParser::InvalidConfigurationException("Duplicate server name: " + serverName);
+    }
+    usedServerNames.insert(serverName);
+  }
+}
+
+void ConfigurationParser::checkForDuplicateRoutes(const std::map<std::string, Server*>& servers) {
+    for (std::map<std::string, Server*>::const_iterator serverIt = servers.begin(); serverIt != servers.end(); ++serverIt) {
+        const Server* server = serverIt->second;
+        std::set<std::string> uniqueRoutes;
+
+        const std::map<std::string, Route>& routes = server->getRoutes();
+        for (std::map<std::string, Route>::const_iterator routeIt = routes.begin(); routeIt != routes.end(); ++routeIt) {
+            const std::string& routePath = routeIt->second.getRoutePath();
+            if (!uniqueRoutes.insert(routePath).second) {
+                // Duplicate route found within the same server
+                std::ostringstream errMsg;
+                errMsg << "Duplicate route detected in server '" << serverIt->first << "': " << routePath;
+                throw::ConfigurationParser::InvalidConfigurationException(errMsg.str());
+            }
+        }
+    }
+}
+void ConfigurationParser::cleanupServers(std::map<std::string, Server*>& servers) {
+  for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
+    std::cout << "DELETING SERVER : " << it->first << std::endl;
+    delete it->second; // Delete the Server object
+  }
+  servers.clear(); // Clear the map
+}
+

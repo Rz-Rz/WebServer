@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include "ServerManager.hpp"
 #include "Reactor.hpp"
+#include <algorithm>
 
 RequestHandler::RequestHandler(int fd, Reactor *reactor) : client_fd(fd), reactor(reactor) {}
 
@@ -49,7 +50,6 @@ void RequestHandler::handle_event(uint32_t events) {
           // std::cout << "PARSED DATA" << std::endl << parser.requestData << std::endl << "END PARSED DATA" << std::endl;
           Logger::log(INFO, "Received complete request");
           Server* server = findServerForHost(parser.getHeader("Host"), ServerManager::getInstance().getServersMap());
-          std::cout << "server name : " << server->getServerName() << std::endl;
           if (server == NULL)
           {
             Logger::log(ERROR, "No matching server found for request:" + parser.getUri());
@@ -80,12 +80,55 @@ void RequestHandler::handle_event(uint32_t events) {
   }
 }
 
+// Server* RequestHandler::findServerForHost(const std::string& host, const std::map<std::string, Server*>* serversMap) {
+//     // Extract the hostname or IP from the host header, excluding the port
+//     std::string parsedHost;
+//     size_t colonPos = host.find(':');
+//     if (colonPos != std::string::npos) {
+//         parsedHost = host.substr(0, colonPos);
+//     } else {
+//         parsedHost = host;
+//     }
+//     // Check if the host header is an IP address
+//     bool isIpAddress = ParsingUtils::isValidIPv4(parsedHost);
+//     // Iterating through the map to find the server with a matching host or server name
+//     if (!serversMap)
+//     {
+//       Logger::log(ERROR, "Servers map is NULL");
+//       return NULL;
+//     }
+//     for (std::map<std::string, Server*>::const_iterator it = serversMap->begin(); it != serversMap->end(); ++it) {
+//       Server* server = it->second;
+//       if (server != NULL) {
+//         std::string serverHost = server->getHost();
+//         // If host header is an IP address
+//         if (isIpAddress) {
+//           // Match if server's host is empty or matches the parsed host
+//           if (serverHost.empty() || parsedHost == serverHost) {
+//             Logger::log(INFO, "Found matching server for IP address: " + parsedHost + " with server :" + server->getServerName());
+//             return server;
+//           }
+//         }
+//         // If host header is not an IP address, compare with server's name
+//         else if (parsedHost == server->getServerName()) {
+//           Logger::log(INFO, "Found matching server for host name: " + parsedHost + " with server :" + server->getServerName());
+//           return server;
+//         }
+//       }
+//     }
+//     Logger::log(ERROR, "No matching server found for host: " + parsedHost);
+//     return NULL;
+// }
+
 Server* RequestHandler::findServerForHost(const std::string& host, const std::map<std::string, Server*>* serversMap) {
-    // Extract the hostname or IP from the host header, excluding the port
+    // Extract hostname or IP and port from the host header
     std::string parsedHost;
+    int parsedPort = -1; // Default to an invalid port
     size_t colonPos = host.find(':');
     if (colonPos != std::string::npos) {
         parsedHost = host.substr(0, colonPos);
+        std::istringstream iss(host.substr(colonPos + 1));
+        iss >> parsedPort;
     } else {
         parsedHost = host;
     }
@@ -93,31 +136,36 @@ Server* RequestHandler::findServerForHost(const std::string& host, const std::ma
     // Check if the host header is an IP address
     bool isIpAddress = ParsingUtils::isValidIPv4(parsedHost);
 
-    // Iterating through the map to find the server with a matching host or server name
-    if (!serversMap)
-    {
-      Logger::log(ERROR, "Servers map is NULL");
-      return NULL;
+    if (!serversMap) {
+        Logger::log(ERROR, "Servers map is NULL");
+        return NULL;
     }
+
     for (std::map<std::string, Server*>::const_iterator it = serversMap->begin(); it != serversMap->end(); ++it) {
         Server* server = it->second;
         if (server != NULL) {
-            std::string serverHost = server->getHost();
-            // If host header is an IP address
-            if (isIpAddress) {
-                // Match if server's host is empty or matches the parsed host
-                if (serverHost.empty() || parsedHost == serverHost) {
+            const std::string& serverHost = server->getHost();
+            const std::vector<int>& serverPorts = server->getPorts();
+
+            // Check for IP address match or empty host
+            if (isIpAddress && (serverHost.empty() || parsedHost == serverHost)) {
+                // Check if parsedPort is among the server's ports
+                if (std::find(serverPorts.begin(), serverPorts.end(), parsedPort) != serverPorts.end()) {
+                    std::ostringstream oss;
+                    oss << parsedPort;
+                    Logger::log(INFO, "Found matching server for IP address: " + parsedHost + " on port " + oss.str() + " with server :" + server->getServerName());
                     return server;
                 }
             }
-            // If host header is not an IP address, compare with server's name
-            else if (parsedHost == server->getServerName()) {
+            // Check for hostname match
+            else if (!isIpAddress && parsedHost == server->getServerName()) {
+                Logger::log(INFO, "Found matching server for host name: " + parsedHost + " with server :" + server->getServerName());
                 return server;
             }
         }
     }
 
-    // Return nullptr if no match is found
+    Logger::log(ERROR, "No matching server found for host: " + parsedHost);
     return NULL;
 }
 

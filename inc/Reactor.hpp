@@ -13,6 +13,7 @@ class Reactor {
 		Reactor();
 		~Reactor();
 		void register_handler(EventHandler* eh);
+    void deregisterHandler(int fd);
 		void event_loop();
 };
 

@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
   }
   std::cout << "Number of servers to process: " << servers.size() << std::endl;
   SignalHandler::getInstance().setServersMap(&servers);
+  ServerManager::getInstance().setServersMap(&servers);
   for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
       Server* serverConfig = it->second;
       std::cout << "Processing server: " << serverConfig->getServerName() << " with routes:" << std::endl;
@@ -92,8 +93,9 @@ int main(int argc, char** argv) {
         Logger::log(INFO, "Server listening on port " + portStr.str());
 
         // Create and register an AcceptHandler for this server_fd
+        SignalHandler::getInstance().setReactor(&reactor);
         AcceptHandler* handler = new AcceptHandler(server_fd, reactor, serverConfig); // Manage memory carefully
-        SignalHandler::getInstance().registerResource(handler);
+        // SignalHandler::getInstance().registerResource(handler);
         reactor.register_handler(handler);
       }
     }

@@ -14,8 +14,9 @@
 #include "SystemUtils.hpp"
 #include <sys/wait.h>
 #include "ServerManager.hpp"
+#include "Reactor.hpp"
 
-RequestHandler::RequestHandler(int fd) : client_fd(fd) {}
+RequestHandler::RequestHandler(int fd, Reactor *reactor) : client_fd(fd), reactor(reactor) {}
 
 RequestHandler::~RequestHandler() {
   SystemUtils::closeUtil(client_fd);
@@ -48,6 +49,7 @@ void RequestHandler::handle_event(uint32_t events) {
           // std::cout << "PARSED DATA" << std::endl << parser.requestData << std::endl << "END PARSED DATA" << std::endl;
           Logger::log(INFO, "Received complete request");
           Server* server = findServerForHost(parser.getHeader("Host"), ServerManager::getInstance().getServersMap());
+          std::cout << "server name : " << server->getServerName() << std::endl;
           if (server == NULL)
           {
             Logger::log(ERROR, "No matching server found for request:" + parser.getUri());
@@ -98,6 +100,11 @@ Server* RequestHandler::findServerForHost(const std::string& host, const std::ma
     bool isIpAddress = ParsingUtils::isValidIPv4(parsedHost);
 
     // Iterating through the map to find the server with a matching host or server name
+    if (!serversMap)
+    {
+      Logger::log(ERROR, "Servers map is NULL");
+      return NULL;
+    }
     for (std::map<std::string, Server*>::const_iterator it = serversMap->begin(); it != serversMap->end(); ++it) {
         Server* server = it->second;
         if (server != NULL) {
@@ -704,9 +711,10 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
 RequestHandler::RequestHandler() {}
 
 void RequestHandler::closeConnection(void) {
+  reactor->deregisterHandler(client_fd);
   if (client_fd >= 0) {
     SystemUtils::closeUtil(client_fd);
-    client_fd = -1; // Invalidate the file descriptor
+    client_fd = -1;
   }
-    delete this;
+  delete this;
 }

@@ -5,11 +5,13 @@
 #include "EventHandler.hpp"
 #include "Server.hpp"
 #include "MultipartFormDataParser.hpp"
+#include "Reactor.hpp"
 
 class RequestHandler : public EventHandler {
   private: 
     int client_fd;
     HTTPRequestParser parser;
+    Reactor* reactor;
 
     void sendRedirectResponse(const std::string& redirectLocation);
     void sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content);
@@ -37,7 +39,7 @@ class RequestHandler : public EventHandler {
 
   public:
     RequestHandler();
-    explicit RequestHandler(int fd);
+    explicit RequestHandler(int fd, Reactor* reactor);
     virtual ~RequestHandler();
 
     void handle_event(uint32_t events);
@@ -48,6 +50,5 @@ class RequestHandler : public EventHandler {
     void sendErrorResponse(int errorCode, const Server* server);
     std::string extractDirectoryPath(const std::string& filePath);
     std::string getMimeType(const std::string& filePath);
-    // bool getShouldBeDeleted(void) const;
 };
 #endif

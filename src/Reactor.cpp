@@ -5,6 +5,8 @@
 #include <cerrno>
 #include <unistd.h>
 #include <fcntl.h>
+#include "Logger.hpp"
+#include "ParsingUtils.hpp"
 
 
 
@@ -16,7 +18,11 @@ Reactor::Reactor() {
 }
 
 Reactor::~Reactor() {
-	close(epfd);
+  for (std::map<int, EventHandler*>::iterator it = handlers.begin(); it != handlers.end(); ++it) {
+    delete it->second;  // Delete EventHandler objects
+  }
+  handlers.clear();  // Clear the map
+  close(epfd);
 }
 
 void Reactor::register_handler(EventHandler* eh) {
@@ -31,10 +37,17 @@ void Reactor::register_handler(EventHandler* eh) {
 
 	epoll_event event = {};
 	event.events = EPOLLIN | EPOLLOUT;
-	event.data.ptr = eh;
-	if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event) == -1)
-		throw std::runtime_error("Error adding epoll event: " + std::string(strerror(errno)));
-	handlers[fd] = eh;
+  event.data.ptr = eh;
+  if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event) == -1)
+    throw std::runtime_error("Error adding epoll event: " + std::string(strerror(errno)));
+  Logger::log(INFO, "Handler registered for fd: " + ParsingUtils::toString(fd));
+  handlers[fd] = eh;
+}
+
+void Reactor::deregisterHandler(int fd) {
+  // if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL) == -1)
+  //   throw std::runtime_error("Error deleting epoll event: " + std::string(strerror(errno)));
+  handlers.erase(fd);
 }
 
 void Reactor::event_loop() {
@@ -47,7 +60,7 @@ void Reactor::event_loop() {
 		}
 		for (int n = 0; n < nfds; ++n) {
 			EventHandler* eh = (EventHandler*)events[n].data.ptr;
-			eh->handle_event(events[n].events);
-		}
+      eh->handle_event(events[n].events);
+    }
 	}
 }

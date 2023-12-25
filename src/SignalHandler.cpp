@@ -1,5 +1,5 @@
 #include "SignalHandler.hpp"
-
+#include "Logger.hpp"
 
 SignalHandler& SignalHandler::getInstance() {
   static SignalHandler instance;
@@ -8,11 +8,14 @@ SignalHandler& SignalHandler::getInstance() {
 
 void SignalHandler::setupSignalHandlers() {
   std::signal(SIGINT, SignalHandler::handleSignal);
-  // Add other signals if needed
 }
 
 void SignalHandler::cleanup() {
   std::cout << "Cleaning up resources..." << std::endl;
+  if (reactor) {
+    Logger::log(INFO, "Cleaning up reactor");
+    reactor->~Reactor();
+  }
   if (resources.size() > 0) {
     for (std::vector<EventHandler*>::iterator it = resources.begin(); it != resources.end(); ++it) {
       std::cout << "Deleting resource: " << *it << std::endl;
@@ -55,4 +58,8 @@ void SignalHandler::deregisterResource(EventHandler* resource) {
       break;
     }
   }
+}
+
+void SignalHandler::setReactor(Reactor* reactor) {
+  this->reactor = reactor;
 }

@@ -70,17 +70,11 @@ void RequestHandler::handle_event(uint32_t events) {
         break;
       }
       else {
-        // Check the error code
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-          // Resource temporarily unavailable, which is normal for non-blocking sockets
-          Logger::log(INFO, "No more data available at the moment, waiting for more data");
-          break;
-        } else {
-          // Actual error reading from client
-          Logger::log(ERROR, "Error reading from client: " + std::string(strerror(errno)));
-          closeConnection();
-          break;
-        }
+        // We cannot check the error code because of the project rules (wtf?)
+        // Logger::log(ERROR, "Error reading from client: " + std::string(strerror(errno)));
+        Logger::log(ERROR, "Error reading from client");
+        closeConnection();
+        break;
       }
     }
   }
@@ -177,7 +171,9 @@ void RequestHandler::sendErrorResponse(int errorCode, const Server* server) {
   responseStream << errorPageContent;
 
   std::string response = responseStream.str();
-  write(client_fd, response.c_str(), response.size());
+  if (write(client_fd, response.c_str(), response.size()) <= 0)
+    Logger::log(ERROR, "Error sending error response: " + std::string(strerror(errno)));
+  return;
 }
 
 std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath) {
@@ -675,8 +671,10 @@ void RequestHandler::sendRedirectResponse(const std::string& redirectLocation) {
     responseStream << "\r\n";
 
     std::string response = responseStream.str();
-    write(client_fd, response.c_str(), response.size());
-    Logger::log(INFO, "Sent redirect response to: " + redirectLocation);
+    if (write(client_fd, response.c_str(), response.size()) <= 0)
+      Logger::log(ERROR, "Error sending redirect response: " + std::string(strerror(errno)));
+    else
+      Logger::log(INFO, "Sent redirect response to: " + redirectLocation);
 }
 
 void RequestHandler::sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content) {
@@ -704,8 +702,10 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
     std::string response = responseStream.str();
 
     // Send the response to the client
-    write(client_fd, response.c_str(), response.size());
-    Logger::log(INFO, "Sent response with status code: " + statusCode);
+    if (write(client_fd, response.c_str(), response.size()) <= 0)
+      Logger::log(ERROR, "Error sending response: " + std::string(strerror(errno)));
+    else
+      Logger::log(INFO, "Sent response with status code: " + statusCode);
 }
 
 RequestHandler::RequestHandler() {}

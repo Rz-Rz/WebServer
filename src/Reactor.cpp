@@ -45,8 +45,8 @@ void Reactor::register_handler(EventHandler* eh) {
 }
 
 void Reactor::deregisterHandler(int fd) {
-  // if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL) == -1)
-  //   throw std::runtime_error("Error deleting epoll event: " + std::string(strerror(errno)));
+  if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL) == -1)
+    throw std::runtime_error("Error deleting epoll event: " + std::string(strerror(errno)));
   handlers.erase(fd);
 }
 

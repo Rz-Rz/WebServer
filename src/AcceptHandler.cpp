@@ -10,6 +10,7 @@
 #include <cerrno>
 #include "Reactor.hpp"
 #include "Logger.hpp"
+#include "SystemUtils.hpp"
 
 AcceptHandler::AcceptHandler(int fd, Reactor &reactor, Server *server) : listen_fd(fd), reactor(reactor), server(server) {}
 
@@ -32,4 +33,8 @@ void AcceptHandler::handle_event(uint32_t /*events*/) {
 
 int AcceptHandler::get_handle() const {
 	return listen_fd;
+}
+
+AcceptHandler::~AcceptHandler() {
+  SystemUtils::closeUtil(listen_fd);
 }

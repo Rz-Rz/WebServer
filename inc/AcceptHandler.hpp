@@ -14,7 +14,9 @@ class AcceptHandler : public EventHandler {
 
 	public:
 		explicit AcceptHandler(int fd, Reactor& reactor, Server* server);
+    ~AcceptHandler();
 		void handle_event(uint32_t events);
 		int get_handle() const;
+
 };
 #endif

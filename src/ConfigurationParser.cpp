@@ -88,11 +88,23 @@ std::map<std::string, Server*> ConfigurationParser::parse(const std::string& fil
   return parsedConfigs;
 }
 
-void ConfigurationParser::checkValidity(const std::map<std::string, Server*>& servers)
-{
-  ConfigurationParser::checkForDuplicateServerNames(servers);
-  ConfigurationParser::checkForDuplicatePorts(servers);
-  ConfigurationParser::checkForDuplicateRoutes(servers);
+void ConfigurationParser::checkValidity(const std::map<std::string, Server*>& servers) {
+    // Check if there are no servers defined
+    if (servers.empty()) {
+        throw ConfigurationParser::InvalidConfigurationException("No servers defined in the configuration");
+    }
+
+    // Check for duplicate server names, ports, and routes
+    ConfigurationParser::checkForDuplicateServerNames(servers);
+    ConfigurationParser::checkForDuplicatePorts(servers);
+    ConfigurationParser::checkForDuplicateRoutes(servers);
+
+    // Check for the absence of routes in each server
+    for (std::map<std::string, Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
+        if (it->second->getRoutes().empty()) {
+            throw ConfigurationParser::InvalidConfigurationException("No routes defined for server: " + it->first);
+        }
+    }
 }
 
 void ConfigurationParser::parseServerConfig(std::string& line, Server& serverConfig) {
@@ -482,12 +494,10 @@ void ConfigurationParser::parseDefaultFile(std::string& line, Route& route) {
 
   if (file.empty()) {
     Logger::log(WARNING, "default_file is empty, reverting to default.");
-    route.setDefaultFile("index.html");
     return;
   }
   if (ParsingUtils::controlCharacters(file)) {
     Logger::log(WARNING, "Control characters found in default_file: " + file + ", reverting to default.");
-    route.setDefaultFile("index.html");
     return;
   }
   if (file[0] != '/') {
@@ -496,6 +506,7 @@ void ConfigurationParser::parseDefaultFile(std::string& line, Route& route) {
   }
   Logger::log(INFO, "Default file: " + file + " for route " + route.getRoutePath());
   route.setDefaultFile(file);
+  route.setHasDefaultFile(true);
 }
 
 void ConfigurationParser::parseCgiExtensions(std::string& line, Route& route) {

@@ -229,10 +229,21 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
   }
 
   std::string path = tokens.back(); // The last token is the path
+  std::string absolutePath = ParsingUtils::getCurrentWorkingDirectory() + path;
   tokens.pop_back(); // Remove the path from the list of tokens
 
-  if (!ParsingUtils::doesPathExist(path)) {
+  if (!ParsingUtils::doesPathExist(absolutePath)) {
     Logger::log(WARNING, "error_page path does not exist or is not readable, reverting to default.");
+    return;
+  }
+
+  if (!ParsingUtils::hasReadPermissions(absolutePath)) {
+    Logger::log(WARNING, "error_page path does not have read permissions, reverting to default.");
+    return;
+  }
+
+  if (!ParsingUtils::isRegularFile(absolutePath)) {
+    Logger::log(WARNING, "error_page path is not a regular file, reverting to default.");
     return;
   }
 
@@ -259,7 +270,7 @@ void ConfigurationParser::parseErrorPages(std::string& line, Server& serverConfi
       continue;
     }
     Logger::log(INFO, "Error code: " + codeStr + " Error path: " + path);
-    serverConfig.setErrorPage(errorCode, path);
+    serverConfig.setErrorPage(errorCode, absolutePath);
   }
   serverConfig.hasCustomErrorPage(true);
 }
@@ -272,7 +283,6 @@ void ConfigurationParser::parseClientMaxBodySize(std::string& line, Server& serv
 
   if (sizeStr.empty()) {
     Logger::log(WARNING, "client_max_body_size is empty, reverting to default.");
-    serverConfig.setMaxClientBodySize(1000000);  // Default value
     return;
   }
 
@@ -282,7 +292,6 @@ void ConfigurationParser::parseClientMaxBodySize(std::string& line, Server& serv
 
   if (errno == ERANGE || size < 0 || end == sizeStr.c_str()) {
     Logger::log(WARNING, "client_max_body_size is not a valid number, reverting to default.");
-    serverConfig.setMaxClientBodySize(1000000);  // Default value
     return;
   }
 
@@ -299,14 +308,12 @@ void ConfigurationParser::parseClientMaxBodySize(std::string& line, Server& serv
         break;
       default:
         Logger::log(WARNING, "Invalid client_max_body_size value, reverting to default.");
-        serverConfig.setMaxClientBodySize(1000000);  // Default value
         return;
     }
   }
 
   if (size > LLONG_MAX / multiplier) {
     Logger::log(WARNING, "client_max_body_size calculation overflow, reverting to default.");
-    serverConfig.setMaxClientBodySize(1000000);  // Default value
     return;
   }
 
@@ -314,7 +321,6 @@ void ConfigurationParser::parseClientMaxBodySize(std::string& line, Server& serv
   const long long maxSize = 100LL * 1024 * 1024;  // 100 MB in bytes
   if (size > maxSize) {
     Logger::log(WARNING, "client_max_body_size exceeds 100 MB limit, reverting to default.");
-    serverConfig.setMaxClientBodySize(1000000);  // Default value
     return;
   }
   Logger::log(INFO, "client_max_body_size: " + sizeStr);

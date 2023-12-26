@@ -37,6 +37,14 @@ void ParsingUtils::trim(std::string &s) {
     rtrim(s);
 }
 
+bool ParsingUtils::isRegularFile(const std::string &path) {
+    struct stat buffer;
+    if (stat(path.c_str(), &buffer) == 0) {
+        return S_ISREG(buffer.st_mode);
+    }
+    return false;
+}
+
 // Trim from both ends (copying)
 std::string ParsingUtils::trim_copy(const std::string& s) {
 	std::string str = s;

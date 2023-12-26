@@ -2,6 +2,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <fstream>
 
 ErrorPageManager::ErrorPageManager() {
 defaultErrorPage = 
@@ -22,11 +23,20 @@ void ErrorPageManager::setErrorPage(int errorCode, const std::string& pagePath) 
 }
 
 std::string ErrorPageManager::getErrorPage(int errorCode) const {
-	std::map<int, std::string>::const_iterator it = customErrorPages.find(errorCode);
-	if (it != customErrorPages.end()) {
-		return it->second;
-	}
-	return generateErrorPage(errorCode, errorCodeMessageParser(errorCode));
+  std::map<int, std::string>::const_iterator it = customErrorPages.find(errorCode);
+  if (it != customErrorPages.end()) {
+    std::ifstream file(it->second.c_str());
+    if (file) {
+      std::stringstream buffer;
+      buffer << file.rdbuf();
+      file.close();
+      return buffer.str();
+    } else {
+      // If the file cannot be opened, return a default/generated error page
+      return generateErrorPage(errorCode, errorCodeMessageParser(errorCode));
+    }
+  }
+  return generateErrorPage(errorCode, errorCodeMessageParser(errorCode));
 }
 
 std::string ErrorPageManager::errorCodeMessageParser(int errorCode) const {
@@ -50,6 +60,9 @@ std::string ErrorPageManager::errorCodeMessageParser(int errorCode) const {
 		case 408:
 			errorMessage = "Request Timeout. Error code: 408";
 			break;
+    case 413:
+      errorMessage = "Request Entity Too Large. Error code: 413";
+      break;
 		case 500:
 			errorMessage = "Internal Server Error. Error code: 500";
 			break;

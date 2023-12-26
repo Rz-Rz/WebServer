@@ -202,6 +202,7 @@ void RequestHandler::sendErrorResponse(int errorCode, const Server* server) {
   if (server != NULL)
   {
     errorPageContent = server->getErrorPageManager().getErrorPage(errorCode);
+    std::cout << "Error page content: " << errorPageContent << std::endl;
     errorMessage = server->getErrorPageManager().errorCodeMessageParser(errorCode);
   } else {
     // Default error message and content
@@ -482,7 +483,7 @@ bool RequestHandler::isPayloadTooLarge(const Server* server) {
         contentLength = std::atoll(contentLengthHeader.c_str());
         if (contentLength > server->getMaxClientBodySize()) {
             sendErrorResponse(413, server);
-            Logger::log(ERROR, "413 - Payload too large: " + contentLengthHeader);
+            Logger::log(ERROR, "413 - Payload is too large: " + contentLengthHeader + " Maximum allowed: " + ParsingUtils::toString(server->getMaxClientBodySize()) + " bytes");
             return true; // Payload is too large
         }
     }
@@ -522,9 +523,6 @@ std::string RequestHandler::getUploadDirectoryFromUri(const Route& route, const 
 void RequestHandler::handleFileUpload(const Route& route, const Server* server) {
   std::string filePath = getUploadDirectoryFromUri(route, parser.getUri());
   bool multipartError = false;
-  if (isPayloadTooLarge(server)) {
-    return;
-  }
 
   std::string body = parser.getBody();
   std::string boundary = parser.getBoundary();
@@ -597,8 +595,16 @@ void RequestHandler::handlePostRequest(const Server* server) {
     return;
   }
 
+  if (isPayloadTooLarge(server)) {
+    return;
+  }
+
   if (route.getAllowFileUpload()) {
     handleFileUpload(route, server);
+  }
+  else {
+    Logger::log(INFO, "POST request on URI: " + parser.getUri());
+    sendSuccessResponse("200 OK", "text/html", "POST request received with body: " + parser.getBody());
   }
 }
 

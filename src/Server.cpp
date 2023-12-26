@@ -8,7 +8,7 @@ Server::Server()
       this->host = "";
       this->serverName = "";
       this->customErrorPage = false;
-      this->maxClientBodySize = 0;
+      this->maxClientBodySize = 1000000;
       this->errorPageManager = ErrorPageManager();
       mimeTypes["html"] = "text/html";
       mimeTypes["css"] = "text/css";

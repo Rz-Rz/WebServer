@@ -31,6 +31,7 @@ class ParsingUtils {
 		static bool hasWritePermissions(const std::string& path);
     static bool hasExecutePermissions(const std::string& path);
     static bool isDirectory(const std::string& path);
+    static bool isRegularFile(const std::string& path);
     static bool doesPathExistAndReadable(const std::string& path);
     static bool hasWriteAndExecutePermissions(const std::string& path);
     static std::string readFile(const std::string& filePath);

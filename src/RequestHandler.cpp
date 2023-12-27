@@ -45,6 +45,7 @@ void RequestHandler::handle_event(uint32_t events) {
           closeConnection();
           break;
         }
+        reactor->updateLastActivity(client_fd);
         // Check if the entire request has been received
         if (parser.isCompleteRequest()) {
           // std::cout << "PARSED DATA" << std::endl << parser.requestData << std::endl << "END PARSED DATA" << std::endl;
@@ -58,7 +59,10 @@ void RequestHandler::handle_event(uint32_t events) {
           }
           else {
             RequestHandler::handleRequest(server);
-            closeConnection();
+            if (shouldCloseConnection()) {
+              Logger::log(INFO, "Should close connection");
+              closeConnection();
+            }
           }
           break;
         }
@@ -72,8 +76,6 @@ void RequestHandler::handle_event(uint32_t events) {
       else {
         // We cannot check the error code because of the project rules (wtf?)
         // Logger::log(ERROR, "Error reading from client: " + std::string(strerror(errno)));
-        Logger::log(ERROR, "Error reading from client");
-        closeConnection();
         break;
       }
     }
@@ -268,7 +270,11 @@ std::string RequestHandler::getMimeType(const std::string& filePath) {
 
 void RequestHandler::handleFileRequest(const Route& route, const Server* server) {
   std::string filePath = getFilePathFromUri(route, parser.getUri());
-  if (route.getHasDefaultFile() && ParsingUtils::isDirectory(filePath)) {
+  if (route.getHasRootDirectoryPath()) {
+    filePath = route.getRootDirectoryPath();
+    std::cout << "FILE PATH FROM ROOT DIR: " << filePath << std::endl;
+  }
+  if (route.getHasDefaultFile()) {
     filePath += route.getDefaultFile();
   }
   if (ParsingUtils::isDirectory(filePath))
@@ -307,6 +313,7 @@ std::string RequestHandler::endWithSlash(const std::string& uri) {
 
 void RequestHandler::handleGetRequest(const Server* server) {
   std::string filePath = extractDirectoryPath(parser.getUri());
+  std::cout << "FILE PATH FROM EXTRACT DIR: " << filePath << std::endl;
   Route route;
   try {
     route = server->getRoute(filePath);
@@ -341,6 +348,9 @@ void RequestHandler::handleGetRequest(const Server* server) {
 }
 
 void RequestHandler::setCGIEnvironment(const std::string& queryString) {
+  if (queryString.empty()) {
+    return;
+  }
   setenv("QUERY_STRING", queryString.c_str(), 1);
 }
 
@@ -438,11 +448,19 @@ std::string RequestHandler::extractQueryString(const std::string& uri) {
     return "";
 }
 
-bool RequestHandler::isPayloadTooLarge(const Server* server) {
+bool RequestHandler::isPayloadTooLarge(const Server* server, const Route& route) {
     std::string contentLengthHeader = parser.getHeader("Content-Length");
     long long contentLength = 0;
     if (!contentLengthHeader.empty()) {
         contentLength = std::atoll(contentLengthHeader.c_str());
+        if (route.getHasMaxBodySize())
+        {
+          if (contentLength > route.getMaxBodySize()) {
+            sendErrorResponse(413, server);
+            Logger::log(ERROR, "413 - Payload is too large: " + contentLengthHeader + " Maximum allowed: " + ParsingUtils::toString(route.getMaxBodySize()) + " bytes");
+            return true; // Payload is too large
+          }
+        }
         if (contentLength > server->getMaxClientBodySize()) {
             sendErrorResponse(413, server);
             Logger::log(ERROR, "413 - Payload is too large: " + contentLengthHeader + " Maximum allowed: " + ParsingUtils::toString(server->getMaxClientBodySize()) + " bytes");
@@ -557,7 +575,7 @@ void RequestHandler::handlePostRequest(const Server* server) {
     return;
   }
 
-  if (isPayloadTooLarge(server)) {
+  if (isPayloadTooLarge(server, route)) {
     return;
   }
 
@@ -725,6 +743,10 @@ void RequestHandler::sendSuccessResponse(const std::string& statusCode, const st
 }
 
 RequestHandler::RequestHandler() {}
+
+bool RequestHandler::shouldCloseConnection() {
+    return reactor->isClientInactive(client_fd);
+}
 
 void RequestHandler::closeConnection(void) {
   reactor->deregisterHandler(client_fd);

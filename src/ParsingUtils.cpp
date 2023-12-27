@@ -267,3 +267,8 @@ bool ParsingUtils::hasExecutePermissions(const std::string &path)
 {
   return access(path.c_str(), X_OK) == 0;
 }
+
+std::string ParsingUtils::getWebservRoot(void) {
+  std::string cwd = getCurrentWorkingDirectory();
+  return cwd + "/webserv";
+}

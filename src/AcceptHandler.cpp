@@ -38,3 +38,7 @@ int AcceptHandler::get_handle() const {
 AcceptHandler::~AcceptHandler() {
   SystemUtils::closeUtil(listen_fd);
 }
+
+void AcceptHandler::closeConnection(void) {
+  SystemUtils::closeUtil(listen_fd);
+}

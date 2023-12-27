@@ -24,9 +24,10 @@ class RequestHandler : public EventHandler {
     void handleFileUpload(const Route& route, const Server* server);
     void handleCGIRequest(const Route& route, const Server* server);
     void setCGIEnvironment(const std::string& queryString);
-    void closeConnection(void);
+
     std::string executeCGI(const std::string& filePath);
-    bool isPayloadTooLarge(const Server* server);
+    bool isPayloadTooLarge(const Server* server, const Route& route);
+    bool shouldCloseConnection(void);
     std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath);
     std::string extractFilename(const HTTPRequestParser& parser);
     std::string getFilename(const MultipartFormDataParser& parser);
@@ -50,5 +51,6 @@ class RequestHandler : public EventHandler {
     void sendErrorResponse(int errorCode, const Server* server);
     std::string extractDirectoryPath(const std::string& filePath);
     std::string getMimeType(const std::string& filePath);
+    void closeConnection(void);
 };
 #endif

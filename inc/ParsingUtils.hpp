@@ -37,6 +37,7 @@ class ParsingUtils {
     static std::string readFile(const std::string& filePath);
     static std::vector<std::string> getDirectoryContents(const std::string& directoryPath);
     static std::string getCurrentWorkingDirectory(void);
+    static std::string getWebservRoot(void);
 
     // url Utils
     static bool isAbsoluteUrl(const std::string& url);

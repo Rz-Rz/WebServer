@@ -10,10 +10,6 @@ Server::Server()
       this->customErrorPage = false;
       this->maxClientBodySize = 1000000;
       this->errorPageManager = ErrorPageManager();
-      mimeTypes["html"] = "text/html";
-      mimeTypes["css"] = "text/css";
-      mimeTypes["jpg"] = "image/jpeg";
-      mimeTypes["jpeg"] = "image/jpeg";
 }
 
 // Setters

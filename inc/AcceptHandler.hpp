@@ -17,6 +17,7 @@ class AcceptHandler : public EventHandler {
     ~AcceptHandler();
 		void handle_event(uint32_t events);
 		int get_handle() const;
+    void closeConnection(void);
 
 };
 #endif

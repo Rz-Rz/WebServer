@@ -21,4 +21,7 @@ void RouteDebug::printRouteInfo(const Route& route) {
   std::cout << std::endl;
   std::cout << "Allow File Upload: " << std::boolalpha << route.getAllowFileUpload() << std::endl;
   std::cout << "Upload Location: " << route.getUploadLocation() << std::endl;
+  std::cout << "Has Max Body Size: " << std::boolalpha << route.getHasMaxBodySize() << std::endl;
+  std::cout << "Max Body Size: " << route.getMaxBodySize() << std::endl;
+  std::cout << "Has Root Directory Path: " << std::boolalpha << route.getHasRootDirectoryPath() << std::endl;
 }

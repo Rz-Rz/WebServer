@@ -11,15 +11,38 @@ Route::Route()
     this->hasCGI = false;
     this->allowFileUpload = false;
     this->hasDefaultFile = false;
+    this->hasMaxBodySize = false;
+    this->hasRootDirectoryPath = false;
+    this->maxBodySize = 1000000;
     std::string cwd = ParsingUtils::getCurrentWorkingDirectory();
     this->rootDirectoryPath = cwd + "/webserv/";
     this->uploadLocation = cwd + "/webserv/uploads/";
 }
 
 // Setters
+void Route::setHasRootDirectoryPath(bool value)
+{
+    this->hasRootDirectoryPath = value;
+}
+
 void Route::setHasDefaultFile(bool value)
 {
     this->hasDefaultFile = value;
+}
+
+void Route::setHasMaxBodySize(bool value)
+{
+  this->hasMaxBodySize = value;
+}
+
+void Route::setMaxBodySize(int size)
+{
+    this->maxBodySize = size;
+}
+
+void Route::setCGIPath(const std::string& path)
+{
+    this->cgi_path = path;
 }
 
 void Route::setRoutePath(const std::string& path)
@@ -156,4 +179,24 @@ bool Route::getHasDefaultFile() const
 bool Route::getDeleteMethod() const
 {
     return this->deleteMethod;
+}
+
+std::string Route::getCGIPath() const
+{
+    return this->cgi_path;
+}
+
+int Route::getMaxBodySize() const
+{
+    return this->maxBodySize;
+}
+
+bool Route::getHasMaxBodySize() const
+{
+  return this->hasMaxBodySize;
+}
+
+bool Route::getHasRootDirectoryPath() const
+{
+    return this->hasRootDirectoryPath;
 }

@@ -128,7 +128,7 @@ void ConfigurationParser::parseRouteConfig(std::string& line, Route& routeConfig
   else if (ParsingUtils::matcher(line, "redirect"))
     ConfigurationParser::parseRedirect(line, routeConfig);
 
-  else if (ParsingUtils::matcher(line, "root"))
+  else if (ParsingUtils::matcher(line, "root_directory"))
     ConfigurationParser::parseRoot(line, routeConfig);
 
   else if (ParsingUtils::matcher(line, "directory_listing"))
@@ -145,6 +145,9 @@ void ConfigurationParser::parseRouteConfig(std::string& line, Route& routeConfig
 
   else if (ParsingUtils::matcher(line, "upload_location"))
     ConfigurationParser::parseUploadLocation(line, routeConfig);
+
+  else if (ParsingUtils::matcher(line, "cgi_pass"))
+    ConfigurationParser::parseCgiPass(line, routeConfig);
 }
 
 // Parse server Config
@@ -447,19 +450,22 @@ void ConfigurationParser::parseRoot(std::string& line, Route& route) {
   if (root.find("../") != std::string::npos) {
     throw ConfigurationParser::InvalidConfigurationException("Relative paths outside server root are forbidden: " + root);
   }
-  if (ParsingUtils::doesPathExist(root) == false) {
-    Logger::log(WARNING, "root path does not exist: " + root + " reverting to default root.");
+  std::string fullPath = ParsingUtils::getWebservRoot() + root;
+  std::cout << "THIS IS THE FULL PATH:" << fullPath << std::endl;
+  if (ParsingUtils::doesPathExist(fullPath) == false) {
+    Logger::log(WARNING, "root path does not exist: " + fullPath + " reverting to default root.");
     return;
-  } else if (ParsingUtils::hasReadPermissions(root) == false) {
-    Logger::log(WARNING, "root path does not have read permissions: " + root + " reverting to default root.");
-    return;
-  }
-  else if (ParsingUtils::hasWritePermissions(root) == false) {
-    Logger::log(WARNING, "root path does not have write permissions: " + root + " reverting to default root.");
+  } else if (ParsingUtils::hasReadPermissions(fullPath) == false) {
+    Logger::log(WARNING, "root path does not have read permissions: " + fullPath + " reverting to default root.");
     return;
   }
-  Logger::log(INFO, "Root: " + root + " for route " + route.getRoutePath());
-  route.setRootDirectoryPath(root);
+  else if (ParsingUtils::hasWritePermissions(fullPath) == false) {
+    Logger::log(WARNING, "root path does not have write permissions: " + fullPath + " reverting to default root.");
+    return;
+  }
+  Logger::log(INFO, "Root: " + fullPath + " for route " + route.getRoutePath());
+  route.setRootDirectoryPath(fullPath);
+  route.setHasRootDirectoryPath(true);
 }
 
 
@@ -587,6 +593,91 @@ void ConfigurationParser::parseUploadLocation(std::string& line, Route& route) {
   }
   Logger::log(INFO, "Upload location: " + location + " for route " + route.getRoutePath());
   route.setUploadLocation(location);
+}
+
+void ConfigurationParser::parseMaxBodySize(std::string& line, Route& route) {
+  std::istringstream iss(line);
+  std::string sizeStr;
+  iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');
+  getline(iss, sizeStr);
+
+  if (sizeStr.empty()) {
+    Logger::log(WARNING, "client_max_body_size is empty, reverting to default.");
+    return;
+  }
+
+  char* end;
+  errno = 0;
+  long long size = std::strtol(sizeStr.c_str(), &end, 10);
+
+  if (errno == ERANGE || size < 0 || end == sizeStr.c_str()) {
+    Logger::log(WARNING, "client_max_body_size is not a valid number, reverting to default.");
+    return;
+  }
+
+  long long multiplier = 1;  // Default is bytes
+  if (*end != '\0') { // Suffix present
+    switch (*end) {
+      case 'k':
+      case 'K':
+        multiplier = 1024;
+        break;
+      case 'm':
+      case 'M':
+        multiplier = 1024 * 1024;
+        break;
+      default:
+        Logger::log(WARNING, "Invalid client_max_body_size value, reverting to default.");
+        return;
+    }
+  }
+
+  if (size > LLONG_MAX / multiplier) {
+    Logger::log(WARNING, "client_max_body_size calculation overflow, reverting to default.");
+    return;
+  }
+
+  size *= multiplier;
+  const long long maxSize = 100LL * 1024 * 1024;  // 100 MB in bytes
+  if (size > maxSize) {
+    Logger::log(WARNING, "client_max_body_size exceeds 100 MB limit, reverting to default.");
+    return;
+  }
+  Logger::log(INFO, "client_max_body_size: " + sizeStr);
+  route.setMaxBodySize(size);
+  route.setHasMaxBodySize(true);
+}
+
+void ConfigurationParser::parseCgiPass(std::string &line, Route &route) {
+  std::istringstream iss(line);
+  std::string cgiPath;
+  iss.ignore(std::numeric_limits<std::streamsize>::max(), '=');
+  getline(iss, cgiPath);
+
+  if (cgiPath.empty()) {
+    Logger::log(WARNING, "cgi_pass is empty, reverting to default.");
+    return;
+  }
+
+  std::string fullPath = ParsingUtils::getWebservRoot() + cgiPath;
+  if (!ParsingUtils::doesPathExist(fullPath))
+  {
+    Logger::log(WARNING, "cgi_pass path does not exist: " + fullPath + " reverting to default.");
+    return;
+  }
+  if (!ParsingUtils::isRegularFile(fullPath))
+  {
+    Logger::log(WARNING, "cgi_pass path is not a regular file: " + fullPath + " reverting to default.");
+    return;
+  }
+  if (!ParsingUtils::hasExecutePermissions(fullPath))
+  {
+    Logger::log(WARNING, "cgi_pass path does not have execute permissions: " + fullPath + " reverting to default.");
+    return;
+  }
+  route.setCGIPath(fullPath);
+  route.setHasCGI(true);
+  Logger::log(INFO, "CGI path: " + fullPath + " for route " + route.getRoutePath());
 }
 
 void ConfigurationParser::checkForDuplicatePorts(const std::map<std::string, Server *> &servers)

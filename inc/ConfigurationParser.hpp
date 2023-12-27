@@ -42,6 +42,8 @@ class ConfigurationParser {
 		static void parseCgiExtensions(std::string& line, Route& route);
 		static void parseAllowFileUpload(std::string& line, Route& route);
 		static void parseUploadLocation(std::string& line, Route& route);
+    static void parseCgiPass(std::string& line, Route& route);
+    static void parseMaxBodySize(std::string& line, Route& route);
 
     static void checkForDuplicateServerNames(const std::map<std::string, Server*>& servers);
     static void checkForDuplicatePorts(const std::map<std::string, Server*>& servers);

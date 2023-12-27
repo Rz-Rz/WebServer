@@ -5,10 +5,11 @@
 #include <cerrno>
 #include <unistd.h>
 #include <fcntl.h>
+#include "EventHandler.hpp"
 #include "Logger.hpp"
 #include "ParsingUtils.hpp"
-
-
+#include "SystemUtils.hpp"
+#include "RequestHandler.hpp"
 
 Reactor::Reactor() {
 	epfd = epoll_create(1);
@@ -55,7 +56,7 @@ void Reactor::event_loop() {
 		epoll_event events[10];
 		int nfds = epoll_wait(epfd, events, 10, -1);
 		if (nfds == -1) {
-			std::cerr << "Error in epoll_wait: " << strerror(errno) << std::endl;
+      Logger::log(ERROR, "Error in epoll_wait: " + std::string(strerror(errno)));
 			return;
 		}
 		for (int n = 0; n < nfds; ++n) {
@@ -64,3 +65,41 @@ void Reactor::event_loop() {
     }
 	}
 }
+
+void Reactor::updateLastActivity(int fd) {
+  lastActivityMap[fd] = time(NULL);
+}
+
+void Reactor::removeInactiveClients(int timeout) {
+  time_t currentTime = time(NULL);
+  for (std::map<int, time_t>::iterator it = lastActivityMap.begin(); it != lastActivityMap.end(); ++it) {
+    if (currentTime - it->second > timeout) {
+      Logger::log(INFO, "Removing inactive client: " + ParsingUtils::toString(it->first));
+      EventHandler *eh = handlers[it->first];
+      eh->closeConnection();
+      lastActivityMap.erase(it++);
+    }
+    else {
+      ++it;
+    }
+  }
+}
+
+bool Reactor::isClientInactive(int fd) {
+    time_t lastActivity = getLastActivityTime(fd); // Retrieve last activity time for fd
+    time_t currentTime = time(NULL);
+    const int timeout = 5; // 5 seconds timeout
+    return (currentTime - lastActivity > timeout);
+}
+
+time_t Reactor::getLastActivityTime(int fd) {
+    std::map<int, time_t>::iterator it = lastActivityMap.find(fd);
+    if (it != lastActivityMap.end()) {
+        // Found the file descriptor, return the last activity time
+        return it->second;
+    } else {
+        // If the file descriptor is not found, return the start of UNIX EPOCH (1 jan 1970)
+        return 0;
+    }
+}
+

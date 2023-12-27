@@ -23,6 +23,10 @@ public:
     void setAllowFileUpload(bool allow);
     void setUploadLocation(const std::string& location);
     void setHasDefaultFile(bool value);
+    void setCGIPath(const std::string& path);
+    void setMaxBodySize(int size);
+    void setHasMaxBodySize(bool value);
+    void setHasRootDirectoryPath(bool value);
 
     std::string getRoutePath() const;
     bool getGetMethod() const;
@@ -38,6 +42,10 @@ public:
     bool getAllowFileUpload() const;
     std::string getUploadLocation() const;
     bool getHasDefaultFile() const;
+    std::string getCGIPath() const;
+    int getMaxBodySize() const;
+    bool getHasMaxBodySize() const;
+    bool getHasRootDirectoryPath() const;
 
 private:
     std::string routePath;
@@ -51,9 +59,13 @@ private:
     std::string defaultFile;
     bool hasDefaultFile;
     bool hasCGI;
+    std::string cgi_path;
     std::vector<std::string> cgiExtensions;
     bool allowFileUpload;
     std::string uploadLocation;
+    int maxBodySize;
+    bool hasMaxBodySize;
+    bool hasRootDirectoryPath;
 };
 
 #endif

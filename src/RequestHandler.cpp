@@ -74,6 +74,8 @@ void RequestHandler::handle_event(uint32_t events) {
         break;
       }
       else {
+        Logger::log(ERROR, "Error reading from client: ");
+        closeConnection();
         // We cannot check the error code because of the project rules (wtf?)
         // Logger::log(ERROR, "Error reading from client: " + std::string(strerror(errno)));
         break;
@@ -136,26 +138,37 @@ int RequestHandler::get_handle() const {
 }
 
 std::string RequestHandler::getFilePathFromUri(const Route& route, const std::string& uri) {
-    std::string rootPath = route.getRootDirectoryPath();
-    std::string filePath = rootPath;
+  std::string rootPath = route.getRootDirectoryPath();
+  std::string filePath = rootPath;
 
-    // Check if the root path ends with a slash and adjust accordingly
-    if (!rootPath.empty() && rootPath[rootPath.length() - 1] != '/') {
-        filePath += "/";
-    }
-    // Append the URI to the root directory path, omitting the leading slash in the URI
-    if (!uri.empty() && uri != "/") {
-        if (uri[0] == '/') {
-            filePath += uri.substr(1);
-        } else {
-            filePath += uri;
-        }
-    } else {
-        // Use the default file if the URI is just '/'
-        filePath += route.getDefaultFile();
-    }
+  // Check if the root path ends with a slash and adjust accordingly
+  if (!rootPath.empty() && rootPath[rootPath.length() - 1] != '/') {
+    filePath += "/";
+  }
+  if (route.getHasCGI())
+  {
+    filePath = route.getCGIPath();
     return filePath;
+  }
+  // Append the URI to the root directory path, omitting the leading slash in the URI
+  if (route.getHasDefaultFile()) {
+    std::string file = route.getDefaultFile();
+    if (file[0] == '/')
+      filePath += file.substr(1);
+    else
+      filePath += file;
+  }
+  else if (!route.getHasRootDirectoryPath())
+  {
+    filePath += uri.substr(1);
+  }
+  else
+  {
+    filePath += uri;
+  }
+  return filePath;
 }
+
 
 void RequestHandler::sendErrorResponse(int errorCode, const Server* server) {
   std::string errorPageContent;
@@ -270,13 +283,7 @@ std::string RequestHandler::getMimeType(const std::string& filePath) {
 
 void RequestHandler::handleFileRequest(const Route& route, const Server* server) {
   std::string filePath = getFilePathFromUri(route, parser.getUri());
-  if (route.getHasRootDirectoryPath()) {
-    filePath = route.getRootDirectoryPath();
-    std::cout << "FILE PATH FROM ROOT DIR: " << filePath << std::endl;
-  }
-  if (route.getHasDefaultFile()) {
-    filePath += route.getDefaultFile();
-  }
+  std::cout << "File path after getFilePathFromUri: " << filePath << std::endl;
   if (ParsingUtils::isDirectory(filePath))
   {
     sendErrorResponse(403, server);
@@ -290,7 +297,6 @@ void RequestHandler::handleFileRequest(const Route& route, const Server* server)
     return;
   } else {
     sendErrorResponse(404, server);
-    
     Logger::log(ERROR, "404 - File not found: " + filePath);
     return;
   }
@@ -312,17 +318,27 @@ std::string RequestHandler::endWithSlash(const std::string& uri) {
 }
 
 void RequestHandler::handleGetRequest(const Server* server) {
-  std::string filePath = extractDirectoryPath(parser.getUri());
-  std::cout << "FILE PATH FROM EXTRACT DIR: " << filePath << std::endl;
+  std::string originalPath = removeQueryString(parser.getUri()); // Get the original URI
+  std::cout << "originalPath after removeQueryString: " << originalPath << std::endl;
   Route route;
   try {
-    route = server->getRoute(filePath);
-  } catch (const std::out_of_range& e) {
-    // No route found for this URI
-    sendErrorResponse(404, server);
-    Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
-    return;
+    // First try to find the route directly with the original URI
+    route = server->getRoute(originalPath);
+  } catch (const std::out_of_range&) {
+    // If not found, try extracting the directory path and then finding the route
+    std::string directoryPath = extractDirectoryPath(originalPath);
+    std::cout << "directoryPath after extractDirectoryPath: " << directoryPath << std::endl;
+    try {
+      route = server->getRoute(directoryPath);
+    } catch (const std::out_of_range& e) {
+      // No route found for either the original URI or the directory path
+      sendErrorResponse(404, server);
+      Logger::log(ERROR, "404 - No route found for URI: " + originalPath);
+      return;
+    }
   }
+
+
   if (!route.getGetMethod()) {
     // Method not allowed for this route
     sendErrorResponse(405, server);
@@ -365,17 +381,13 @@ std::string RequestHandler::removeQueryString(const std::string& uri) {
 void RequestHandler::handleCGIRequest(const Route& route, const Server* server) {
   std::string queryString = extractQueryString(parser.getUri());
   std::string filePath = getFilePathFromUri(route, parser.getUri());
+  std::cout << "File path after getFilePathFromUri: " << filePath << std::endl;
   filePath = removeQueryString(filePath);
+  std::cout << "File path after removeQueryString: " << filePath << std::endl;
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
     sendErrorResponse(404, server);
-    return;
-  }
-
-  if (!ParsingUtils::hasReadPermissions(filePath)) {
-    Logger::log(ERROR, "403 - File is not readable: " + filePath);
-    sendErrorResponse(403, server);
     return;
   }
 
@@ -384,6 +396,7 @@ void RequestHandler::handleCGIRequest(const Route& route, const Server* server) 
     sendErrorResponse(403, server);
     return;
   }
+  std::cout << "queryString : " << queryString << std::endl;
   setCGIEnvironment(queryString);
   // File exists and is readable and executable
   Logger::log(INFO, "CGI request on GET request: " + filePath);

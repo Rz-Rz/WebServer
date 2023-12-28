@@ -1,9 +1,0 @@
---------------------------ddc60d4e119ef6bc
-Content-Disposition: form-data; name="file"; filename="test.txt"
-Content-Type: text/plain
-
-this is a text <fieldset>
-  as a test
-</fieldset>
-
---------------------------ddc60d4e119ef6bc--

@@ -15,12 +15,30 @@
 #include <sys/wait.h>
 #include "ServerManager.hpp"
 #include "Reactor.hpp"
+#include "HTTPResponse.hpp"
 #include <algorithm>
 
 RequestHandler::RequestHandler(int fd, Reactor *reactor) : client_fd(fd), reactor(reactor) {}
 
 RequestHandler::~RequestHandler() {
   SystemUtils::closeUtil(client_fd);
+}
+
+void RequestHandler::handleSession() {
+  SessionManager& sessionManager = ServerManager::getInstance().getSessionManager();
+  std::string cookieHeader = parser.getHeader("Cookie");
+  std::cout << "Cookie header: " << cookieHeader << std::endl;
+
+  if (!cookieHeader.empty()) {
+    std::string sessionId = extractSessionIdFromCookie(cookieHeader);
+    std::cout << "Session ID: " << sessionId << std::endl;
+    SessionData& sessionData = sessionManager.getSessionData(sessionId);
+    sessionData.incrementRequestCount();
+  } else {
+    std::string sessionId = sessionManager.createSession();
+    // Initialize cookie with the new session ID
+    cookie = Cookie("session_id", sessionId);
+  }
 }
 
 void RequestHandler::handle_event(uint32_t events) {
@@ -35,13 +53,13 @@ void RequestHandler::handle_event(uint32_t events) {
           std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
           Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
-          sendErrorResponse(505, NULL);
+          HTTPResponse::sendErrorResponse(505, NULL, client_fd);
           closeConnection();
           break;
         }
         catch (const HTTPRequestParser::InvalidMethodException& e) {
           Logger::log(ERROR, "Error Parsing HTTP Request: " + std::string(e.what()));
-          sendErrorResponse(405, NULL);
+          HTTPResponse::sendErrorResponse(405, NULL, client_fd);
           closeConnection();
           break;
         }
@@ -54,7 +72,7 @@ void RequestHandler::handle_event(uint32_t events) {
           if (server == NULL)
           {
             Logger::log(ERROR, "No matching server found for request:" + parser.getUri());
-            sendErrorResponse(400, NULL);
+            HTTPResponse::sendErrorResponse(400, NULL, client_fd);
             closeConnection();
           }
           else {
@@ -169,36 +187,6 @@ std::string RequestHandler::getFilePathFromUri(const Route& route, const std::st
   return filePath;
 }
 
-
-void RequestHandler::sendErrorResponse(int errorCode, const Server* server) {
-  std::string errorPageContent;
-  std::string errorMessage;
-  if (server != NULL)
-  {
-    errorPageContent = server->getErrorPageManager().getErrorPage(errorCode);
-    std::cout << "Error page content: " << errorPageContent << std::endl;
-    errorMessage = server->getErrorPageManager().errorCodeMessageParser(errorCode);
-  } else {
-    // Default error message and content
-    std::ostringstream errorContentStream;
-    errorContentStream << "<html><body><h1>Error " << errorCode << "</h1></body></html>";
-    errorPageContent = errorContentStream.str();
-    errorMessage = "Error"; // Generic error message
-  }
-  std::ostringstream responseStream;
-  responseStream << "HTTP/1.1 " << errorCode << " " << errorMessage << "\r\n";  // Use errorMessage
-  responseStream << "Content-Type: text/html\r\n";
-  responseStream << "Content-Length: " << errorPageContent.size() << "\r\n";
-  responseStream << "Connection: close\r\n";
-  responseStream << "\r\n";
-  responseStream << errorPageContent;
-
-  std::string response = responseStream.str();
-  if (write(client_fd, response.c_str(), response.size()) <= 0)
-    Logger::log(ERROR, "Error sending error response: " + std::string(strerror(errno)));
-  return;
-}
-
 std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath) {
   std::ostringstream html;
   // Basic HTML structure
@@ -218,7 +206,7 @@ std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::
 }
 
 void RequestHandler::handleRedirect(const Route& route) {
-  sendRedirectResponse(route.getRedirectLocation());
+  HTTPResponse::sendRedirectResponse(route.getRedirectLocation(), client_fd);
   Logger::log(INFO, "Redirecting to: " + route.getRedirectLocation());
 }
 
@@ -227,12 +215,12 @@ void RequestHandler::handleDirectoryRequest(const Route& route, const Server* se
       std::string directoryPath = getFilePathFromUri(route, parser.getUri());
       if (!ParsingUtils::doesPathExist(directoryPath)) {
         Logger::log(ERROR, "Directory does not exist: " + directoryPath);
-        sendErrorResponse(403, server);
+        HTTPResponse::sendErrorResponse(403, server, client_fd);
         return;
       }
       if (!ParsingUtils::hasReadPermissions(directoryPath)) {
         Logger::log(ERROR, "Directory is not readable: " + directoryPath);
-        sendErrorResponse(403, server);
+        HTTPResponse::sendErrorResponse(403, server, client_fd);
         return;
       }
       // Directory exists and is readable
@@ -242,11 +230,11 @@ void RequestHandler::handleDirectoryRequest(const Route& route, const Server* se
         contents = ParsingUtils::getDirectoryContents(directoryPath);
       } catch (const std::exception& e) {
         Logger::log(ERROR, "500 - Error reading directory contents: " + std::string(e.what()));
-        sendErrorResponse(500, server);
+        HTTPResponse::sendErrorResponse(500, server, client_fd);
         return;
       }
       std::string directoryListingPage = generateDirectoryListingPage(contents, parser.getUri());
-      sendSuccessResponse("200 OK", "text/html", directoryListingPage);
+      HTTPResponse::sendSuccessResponse("200 OK", "text/html", directoryListingPage, cookie, client_fd);
       return;
 }
 
@@ -286,17 +274,17 @@ void RequestHandler::handleFileRequest(const Route& route, const Server* server)
   std::cout << "File path after getFilePathFromUri: " << filePath << std::endl;
   if (ParsingUtils::isDirectory(filePath))
   {
-    sendErrorResponse(403, server);
+    HTTPResponse::sendErrorResponse(403, server, client_fd);
     Logger::log(ERROR, "403 - Directory listing is not enabled: " + filePath);
     return;
   }
   if (ParsingUtils::doesPathExistAndReadable(filePath)) {
     std::string fileContent = ParsingUtils::readFile(filePath);
-    sendSuccessResponse("200 OK", getMimeType(filePath), fileContent);
+    HTTPResponse::sendSuccessResponse("200 OK", getMimeType(filePath), fileContent, cookie, client_fd);
     Logger::log(INFO, "File request on GET request: " + filePath); 
     return;
   } else {
-    sendErrorResponse(404, server);
+    HTTPResponse::sendErrorResponse(404, server, client_fd);
     Logger::log(ERROR, "404 - File not found: " + filePath);
     return;
   }
@@ -332,7 +320,7 @@ void RequestHandler::handleGetRequest(const Server* server) {
       route = server->getRoute(directoryPath);
     } catch (const std::out_of_range& e) {
       // No route found for either the original URI or the directory path
-      sendErrorResponse(404, server);
+      HTTPResponse::sendErrorResponse(404, server, client_fd);
       Logger::log(ERROR, "404 - No route found for URI: " + originalPath);
       return;
     }
@@ -341,7 +329,7 @@ void RequestHandler::handleGetRequest(const Server* server) {
 
   if (!route.getGetMethod()) {
     // Method not allowed for this route
-    sendErrorResponse(405, server);
+    HTTPResponse::sendErrorResponse(405, server, client_fd);
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
@@ -387,13 +375,13 @@ void RequestHandler::handleCGIRequest(const Route& route, const Server* server) 
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
-    sendErrorResponse(404, server);
+    HTTPResponse::sendErrorResponse(404, server, client_fd);
     return;
   }
 
   if (!ParsingUtils::hasExecutePermissions(filePath)) {
     Logger::log(ERROR, "403 - File is not executable: " + filePath);
-    sendErrorResponse(403, server);
+    HTTPResponse::sendErrorResponse(403, server, client_fd);
     return;
   }
   std::cout << "queryString : " << queryString << std::endl;
@@ -401,7 +389,7 @@ void RequestHandler::handleCGIRequest(const Route& route, const Server* server) 
   // File exists and is readable and executable
   Logger::log(INFO, "CGI request on GET request: " + filePath);
   std::string output = RequestHandler::executeCGI(filePath);
-  sendSuccessResponse("200 OK", "text/html", output);
+  HTTPResponse::sendSuccessResponse("200 OK", "text/html", output, cookie, client_fd);
   return;
 }
 
@@ -469,13 +457,13 @@ bool RequestHandler::isPayloadTooLarge(const Server* server, const Route& route)
         if (route.getHasMaxBodySize())
         {
           if (contentLength > route.getMaxBodySize()) {
-            sendErrorResponse(413, server);
+            HTTPResponse::sendErrorResponse(413, server, client_fd);
             Logger::log(ERROR, "413 - Payload is too large: " + contentLengthHeader + " Maximum allowed: " + ParsingUtils::toString(route.getMaxBodySize()) + " bytes");
             return true; // Payload is too large
           }
         }
         if (contentLength > server->getMaxClientBodySize()) {
-            sendErrorResponse(413, server);
+            HTTPResponse::sendErrorResponse(413, server, client_fd);
             Logger::log(ERROR, "413 - Payload is too large: " + contentLengthHeader + " Maximum allowed: " + ParsingUtils::toString(server->getMaxClientBodySize()) + " bytes");
             return true; // Payload is too large
         }
@@ -522,7 +510,7 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
 
   if (boundary.empty()) {
     Logger::log(ERROR, "400 - No boundary found in multipart form data");
-    sendErrorResponse(400, server); // Bad Request
+    HTTPResponse::sendErrorResponse(400, server, client_fd); // Bad Request
     return;
   }
 
@@ -545,13 +533,13 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "Directory does not exist: " + filePath);
-    sendErrorResponse(403, server);
+    HTTPResponse::sendErrorResponse(403, server, client_fd);
     return;
   }
 
   if (!ParsingUtils::hasWritePermissions(filePath)) {
     Logger::log(ERROR, "Directory is not writable: " + filePath);
-    sendErrorResponse(403, server);
+    HTTPResponse::sendErrorResponse(403, server, client_fd);
     return;
   }
 
@@ -562,12 +550,12 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
   std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
   if (!fileStream) {
     Logger::log(ERROR, "500 - Error opening file for writing: " + filePath);
-    sendErrorResponse(500, server);
+    HTTPResponse::sendErrorResponse(500, server, client_fd);
     return;
   }
   fileStream << fileContent;
   fileStream.close();
-  sendSuccessResponse("200 OK", "text/html", "File uploaded successfully");
+  HTTPResponse::sendSuccessResponse("200 OK", "text/html", "File uploaded successfully", cookie, client_fd);
   return;
 }
 
@@ -577,13 +565,13 @@ void RequestHandler::handlePostRequest(const Server* server) {
   try {
     route = server->getRoute(parser.getUri());
   } catch (const std::out_of_range& e) {
-    sendErrorResponse(404, server);
+    HTTPResponse::sendErrorResponse(404, server, client_fd);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
 
   if (!route.getPostMethod()) {
-    sendErrorResponse(405, server);
+    HTTPResponse::sendErrorResponse(405, server, client_fd);
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
@@ -597,7 +585,7 @@ void RequestHandler::handlePostRequest(const Server* server) {
   }
   else {
     Logger::log(INFO, "POST request on URI: " + parser.getUri());
-    sendSuccessResponse("200 OK", "text/html", "POST request received with body: " + parser.getBody());
+    HTTPResponse::sendSuccessResponse("200 OK", "text/html", "POST request received with body: " + parser.getBody(), cookie, client_fd);
   }
 }
 
@@ -637,21 +625,21 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
   try {
     route = server->getRoute(filePath);
   } catch (const std::out_of_range& e) {
-    sendErrorResponse(404, server);
+    HTTPResponse::sendErrorResponse(404, server, client_fd);
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
 
   filePath = getFilePathFromUri(route, parser.getUri());
   if (!route.getDeleteMethod()) {
-    sendErrorResponse(405, server);
+    HTTPResponse::sendErrorResponse(405, server, client_fd);
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
-    sendErrorResponse(404, server);
+    HTTPResponse::sendErrorResponse(404, server, client_fd);
     return;
   }
 
@@ -660,17 +648,17 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
   //check if write and execute permissions are set in the directory in order to delete file.
   if (!ParsingUtils::hasWriteAndExecutePermissions(dir)) {
     Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + dir);
-    sendErrorResponse(403, server);
+    HTTPResponse::sendErrorResponse(403, server, client_fd);
     return;
   }
 
   if (unlink(filePath.c_str()) != 0) {
     Logger::log(ERROR, "500 - Error deleting file: " + filePath);
-    sendErrorResponse(500, server);
+    HTTPResponse::sendErrorResponse(500, server, client_fd);
     return;
   }
 
-  sendSuccessResponse("200 OK", "text/html", "File deleted successfully");
+  HTTPResponse::sendSuccessResponse("200 OK", "text/html", "File deleted successfully", cookie, client_fd);
   return;
 }
 
@@ -701,61 +689,15 @@ std::string RequestHandler::getFilename(const MultipartFormDataParser& parser) {
   return filename;
 }
 
-void RequestHandler::sendRedirectResponse(const std::string& redirectLocation) {
-    std::ostringstream responseStream;
-
-    // HTTP status code 302 for temporary redirection
-    responseStream << "HTTP/1.1 302 Found\r\n";
-
-    // Redirect location header
-    responseStream << "Location: " << redirectLocation << "\r\n";
-
-    // Additional headers can be added here if needed
-    responseStream << "Content-Length: 0\r\n";
-    responseStream << "Connection: close\r\n";
-
-    // End of headers
-    responseStream << "\r\n";
-
-    std::string response = responseStream.str();
-    if (write(client_fd, response.c_str(), response.size()) <= 0)
-      Logger::log(ERROR, "Error sending redirect response: " + std::string(strerror(errno)));
-    else
-      Logger::log(INFO, "Sent redirect response to: " + redirectLocation);
-}
-
-void RequestHandler::sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content) {
-    std::ostringstream responseStream;
-
-    // Start building the HTTP response
-    responseStream << "HTTP/1.1 " << statusCode << "\r\n";
-
-    // Adding headers
-    responseStream << "Content-Type: " << contentType << "\r\n";
-    responseStream << "Content-Length: " << content.size() << "\r\n";
-        // Inform the client that the connection will be closed after the response
-    responseStream << "Connection: close\r\n";
-
-    // If you want to keep the connection alive, you can add Connection header
-    // responseStream << "Connection: keep-alive\r\n";
-
-    // Header and content separation
-    responseStream << "\r\n";
-
-    // Append the actual content
-    responseStream << content;
-
-    // Convert the stream to a string
-    std::string response = responseStream.str();
-
-    // Send the response to the client
-    if (write(client_fd, response.c_str(), response.size()) <= 0)
-      Logger::log(ERROR, "Error sending response: " + std::string(strerror(errno)));
-    else
-      Logger::log(INFO, "Sent response with status code: " + statusCode);
-}
-
 RequestHandler::RequestHandler() {}
+
+std::string RequestHandler::extractSessionIdFromCookie(const std::string& cookie) {
+  size_t pos = cookie.find('=');
+  if (pos != std::string::npos) {
+    return cookie.substr(pos + 1);
+  }
+  return "";
+}
 
 bool RequestHandler::shouldCloseConnection() {
     return reactor->isClientInactive(client_fd);

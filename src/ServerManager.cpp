@@ -5,6 +5,10 @@ ServerManager& ServerManager::getInstance() {
   return instance;
 }
 
+SessionManager& ServerManager::getSessionManager() {
+  return sessionManager;
+}
+
 void ServerManager::setServersMap(std::map<std::string, Server*>* map) {
   serversMap = map;
 }

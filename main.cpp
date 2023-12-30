@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 
       // Create and register an AcceptHandler for this server_fd
       SignalHandler::getInstance().setReactor(&reactor);
-      AcceptHandler* handler = new AcceptHandler(server_fd, reactor, serverConfig); // Manage memory carefully
+      AcceptHandler* handler = new AcceptHandler(server_fd, reactor); // Manage memory carefully
                                                                                     // SignalHandler::getInstance().registerResource(handler);
       reactor.register_handler(handler);
     }

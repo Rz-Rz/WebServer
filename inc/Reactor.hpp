@@ -9,19 +9,18 @@ class Reactor {
 	private:
 		int epfd;
 		std::map<int, EventHandler*> handlers;
-    std::map<int, time_t> lastActivityMap;
-
+		std::map<int, time_t> lastActivityMap;
 	public:
 		Reactor();
 		~Reactor();
 		void register_handler(EventHandler* eh);
-    void deregisterHandler(int fd);
+		void deregisterHandler(int fd);
 		void event_loop();
-    void updateLastActivity(int fd);
-    void removeInactiveClients(int timeout);
-    bool isClientInactive(int fd);
-    time_t getLastActivityTime(int fd);
-
+		void updateLastActivity(int fd);
+		void removeFromInactivityList(int fd);
+		void removeInactiveClients(int timeout);
+		bool isClientInactive(int fd);
+		time_t getLastActivityTime(int fd);
 };
 
 #endif

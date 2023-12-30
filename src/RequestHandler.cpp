@@ -92,11 +92,10 @@ void RequestHandler::handle_event(uint32_t events) {
         break;
       }
       else {
-        Logger::log(ERROR, "Error reading from client: ");
-        closeConnection();
-        // We cannot check the error code because of the project rules (wtf?)
-        // Logger::log(ERROR, "Error reading from client: " + std::string(strerror(errno)));
-        break;
+	      Logger::log(ERROR, "Error reading from client: ");
+	      // We cannot check the error code because of the project rules (wtf?)
+	      // Logger::log(ERROR, "Error reading from client: " + std::string(strerror(errno)));
+	      break;
       }
     }
   }
@@ -156,35 +155,32 @@ int RequestHandler::get_handle() const {
 }
 
 std::string RequestHandler::getFilePathFromUri(const Route& route, const std::string& uri) {
-  std::string rootPath = route.getRootDirectoryPath();
-  std::string filePath = rootPath;
-
-  // Check if the root path ends with a slash and adjust accordingly
-  if (!rootPath.empty() && rootPath[rootPath.length() - 1] != '/') {
-    filePath += "/";
-  }
-  if (route.getHasCGI())
-  {
-    filePath = route.getCGIPath();
-    return filePath;
-  }
-  // Append the URI to the root directory path, omitting the leading slash in the URI
-  if (route.getHasDefaultFile()) {
-    std::string file = route.getDefaultFile();
-    if (file[0] == '/')
-      filePath += file.substr(1);
-    else
-      filePath += file;
-  }
-  else if (!route.getHasRootDirectoryPath())
-  {
-    filePath += uri.substr(1);
-  }
-  else
-  {
-    filePath += uri;
-  }
-  return filePath;
+	std::string rootPath = route.getRootDirectoryPath();
+	std::string filePath = ParsingUtils::removeFinalSlash(rootPath);
+	std::cout << "filepath: " << filePath << std::endl;
+	filePath = filePath + uri;
+	std::cout << "rootpath plus uri: " << filePath << std::endl;
+	if (ParsingUtils::isDirectory(filePath))
+	{
+		if (route.getHasDefaultFile()) {
+			std::cout << "route has default file" << std::endl;
+			std::string file = route.getDefaultFile();
+			if (file[0] == '/')
+				filePath += file.substr(1);
+			else
+				filePath += file;
+		}
+		if (!rootPath.empty() && rootPath[rootPath.length() - 1] != '/') {
+			filePath += "/";
+		}
+	}
+	if (route.getHasCGI())
+	{
+		filePath = route.getCGIPath();
+		return filePath;
+	}
+	std::cout << "filePath after default file: " << filePath << std::endl;
+	return filePath;
 }
 
 std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath) {
@@ -620,46 +616,56 @@ std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
 }
 
 void RequestHandler::handleDeleteRequest(const Server* server) {
-  Route route;
-  std::string filePath = extractDirectoryPath(parser.getUri());
-  try {
-    route = server->getRoute(filePath);
-  } catch (const std::out_of_range& e) {
-    HTTPResponse::sendErrorResponse(404, server, client_fd);
-    Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
-    return;
-  }
+	std::string originalPath = removeQueryString(parser.getUri()); // Get the original URI
+	std::cout << "originalPath after removeQueryString: " << originalPath << std::endl;
+	Route route;
+	try {
+		// First try to find the route directly with the original URI
+		route = server->getRoute(originalPath);
+	} catch (const std::out_of_range&) {
+		// If not found, try extracting the directory path and then finding the route
+		std::string directoryPath = extractDirectoryPath(originalPath);
+		std::cout << "directoryPath after extractDirectoryPath: " << directoryPath << std::endl;
+		try {
+			route = server->getRoute(directoryPath);
+		} catch (const std::out_of_range& e) {
+			// No route found for either the original URI or the directory path
+			HTTPResponse::sendErrorResponse(404, server, client_fd);
+			Logger::log(ERROR, "404 - No route found for URI: " + originalPath);
+			return;
+		}
+	}
 
-  filePath = getFilePathFromUri(route, parser.getUri());
-  if (!route.getDeleteMethod()) {
-    HTTPResponse::sendErrorResponse(405, server, client_fd);
-    Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
-    return;
-  }
+	std::string filePath = getFilePathFromUri(route, parser.getUri());
+	if (!route.getDeleteMethod()) {
+		HTTPResponse::sendErrorResponse(405, server, client_fd);
+		Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
+		return;
+	}
 
-  if (!ParsingUtils::doesPathExist(filePath)) {
-    Logger::log(ERROR, "404 - File not found: " + filePath);
-    HTTPResponse::sendErrorResponse(404, server, client_fd);
-    return;
-  }
+	if (!ParsingUtils::doesPathExist(filePath)) {
+		Logger::log(ERROR, "404 - File not found: " + filePath);
+		HTTPResponse::sendErrorResponse(404, server, client_fd);
+		return;
+	}
 
-  std::string dir = extractDirectoryPath(filePath);
+	std::string dir = extractDirectoryPath(filePath);
 
-  //check if write and execute permissions are set in the directory in order to delete file.
-  if (!ParsingUtils::hasWriteAndExecutePermissions(dir)) {
-    Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + dir);
-    HTTPResponse::sendErrorResponse(403, server, client_fd);
-    return;
-  }
+	//check if write and execute permissions are set in the directory in order to delete file.
+	if (!ParsingUtils::hasWriteAndExecutePermissions(dir)) {
+		Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + dir);
+		HTTPResponse::sendErrorResponse(403, server, client_fd);
+		return;
+	}
 
-  if (unlink(filePath.c_str()) != 0) {
-    Logger::log(ERROR, "500 - Error deleting file: " + filePath);
-    HTTPResponse::sendErrorResponse(500, server, client_fd);
-    return;
-  }
+	if (unlink(filePath.c_str()) != 0) {
+		Logger::log(ERROR, "500 - Error deleting file: " + filePath);
+		HTTPResponse::sendErrorResponse(500, server, client_fd);
+		return;
+	}
 
-  HTTPResponse::sendSuccessResponse("200 OK", "text/html", "File deleted successfully", cookie, client_fd);
-  return;
+	HTTPResponse::sendSuccessResponse("200 OK", "text/html", "File deleted successfully", cookie, client_fd);
+	return;
 }
 
 void RequestHandler::handleRequest(const Server* server) {
@@ -704,10 +710,11 @@ bool RequestHandler::shouldCloseConnection() {
 }
 
 void RequestHandler::closeConnection(void) {
-  reactor->deregisterHandler(client_fd);
-  if (client_fd >= 0) {
-    SystemUtils::closeUtil(client_fd);
-    client_fd = -1;
-  }
-  delete this;
+	reactor->removeFromInactivityList(client_fd);
+	reactor->deregisterHandler(client_fd);
+	if (client_fd >= 0) {
+		SystemUtils::closeUtil(client_fd);
+		client_fd = -1;
+	}
+	delete this;
 }

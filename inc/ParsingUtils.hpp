@@ -38,6 +38,7 @@ class ParsingUtils {
     static std::vector<std::string> getDirectoryContents(const std::string& directoryPath);
     static std::string getCurrentWorkingDirectory(void);
     static std::string getWebservRoot(void);
+    static std::string removeFinalSlash(const std::string& path);
 
     // url Utils
     static bool isAbsoluteUrl(const std::string& url);

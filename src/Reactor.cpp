@@ -26,23 +26,34 @@ Reactor::~Reactor() {
   close(epfd);
 }
 
+void Reactor::removeFromInactivityList(int fd) {
+  lastActivityMap.erase(fd);
+}
+
 void Reactor::register_handler(EventHandler* eh) {
 	int fd = eh->get_handle();
 
-  int flags = fcntl(fd, F_GETFL, 0);
-  if (flags == -1)
-    throw std::runtime_error("Error getting file descriptor flags: " + std::string(strerror(errno)));
-  flags |= O_NONBLOCK;
-  if (fcntl(fd, F_SETFL, flags) == -1)
-    throw std::runtime_error("Error setting non-blocking mode: " + std::string(strerror(errno)));
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1)
+		throw std::runtime_error("Error getting file descriptor flags: " + std::string(strerror(errno)));
+	flags |= O_NONBLOCK;
+	if (fcntl(fd, F_SETFL, flags) == -1)
+		throw std::runtime_error("Error setting non-blocking mode: " + std::string(strerror(errno)));
 
 	epoll_event event = {};
 	event.events = EPOLLIN | EPOLLOUT;
-  event.data.ptr = eh;
-  if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event) == -1)
-    throw std::runtime_error("Error adding epoll event: " + std::string(strerror(errno)));
-  Logger::log(INFO, "Handler registered for fd: " + ParsingUtils::toString(fd));
-  handlers[fd] = eh;
+	event.data.ptr = eh;
+	if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event) == -1)
+		throw std::runtime_error("Error adding epoll event: " + std::string(strerror(errno)));
+	Logger::log(INFO, "Handler registered for fd: " + ParsingUtils::toString(fd));
+	handlers[fd] = eh;
+	// Add the file descriptor to the lastActivityMap with the current time
+	// Check if the EventHandler is a RequestHandler
+	if (dynamic_cast<RequestHandler*>(eh) != NULL) {
+		// Add the file descriptor to the lastActivityMap with the current time
+		lastActivityMap[fd] = time(NULL);
+		Logger::log(INFO, "Added fd to lastActivityMap: " + ParsingUtils::toString(fd));
+	}
 }
 
 void Reactor::deregisterHandler(int fd) {
@@ -52,17 +63,24 @@ void Reactor::deregisterHandler(int fd) {
 }
 
 void Reactor::event_loop() {
+	time_t lastCheckTime = time(NULL);
 	while (true) {
 		epoll_event events[10];
 		int nfds = epoll_wait(epfd, events, 10, -1);
 		if (nfds == -1) {
-      Logger::log(ERROR, "Error in epoll_wait: " + std::string(strerror(errno)));
+			Logger::log(ERROR, "Error in epoll_wait: " + std::string(strerror(errno)));
 			return;
 		}
 		for (int n = 0; n < nfds; ++n) {
 			EventHandler* eh = (EventHandler*)events[n].data.ptr;
-      eh->handle_event(events[n].events);
-    }
+			eh->handle_event(events[n].events);
+		}
+		time_t currentTime = time(NULL);
+		if (currentTime - lastCheckTime >= 5) { // 5 seconds timeout for inactivity check 
+			Logger::log(INFO, "Checking for inactive clients");
+			removeInactiveClients(5); // Perform the check
+			lastCheckTime = currentTime; // Update the last check time
+		}
 	}
 }
 
@@ -71,18 +89,28 @@ void Reactor::updateLastActivity(int fd) {
 }
 
 void Reactor::removeInactiveClients(int timeout) {
-  time_t currentTime = time(NULL);
-  for (std::map<int, time_t>::iterator it = lastActivityMap.begin(); it != lastActivityMap.end(); ++it) {
-    if (currentTime - it->second > timeout) {
-      Logger::log(INFO, "Removing inactive client: " + ParsingUtils::toString(it->first));
-      EventHandler *eh = handlers[it->first];
-      eh->closeConnection();
-      lastActivityMap.erase(it++);
-    }
-    else {
-      ++it;
-    }
-  }
+	time_t currentTime = time(NULL);
+	for (std::map<int, time_t>::iterator it = lastActivityMap.begin(); it != lastActivityMap.end(); /* no increment here */) {
+		if (currentTime - it->second > timeout) {
+			Logger::log(INFO, "Removing inactive client: " + ParsingUtils::toString(it->first));
+			EventHandler *eh = handlers[it->first];
+			int fd = it->first;
+			// Erase and advance iterator in a safe way
+			// First, deregister the handler from epoll and inactivityMap
+			deregisterHandler(fd);
+			// Then close the file descriptor
+			if (fd >= 0) {
+				SystemUtils::closeUtil(fd);
+			}
+			// Finally, delete the EventHandler object
+			if (eh) {
+				delete eh;
+			}
+			lastActivityMap.erase(it++);
+		} else {
+			++it;
+		}
+	}
 }
 
 bool Reactor::isClientInactive(int fd) {

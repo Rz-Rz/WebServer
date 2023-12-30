@@ -12,23 +12,23 @@
 #include "Logger.hpp"
 #include "SystemUtils.hpp"
 
-AcceptHandler::AcceptHandler(int fd, Reactor &reactor, Server *server) : listen_fd(fd), reactor(reactor), server(server) {}
+AcceptHandler::AcceptHandler(int fd, Reactor &reactor) : listen_fd(fd), reactor(reactor) {}
 
 void AcceptHandler::handle_event(uint32_t /*events*/) {
-  Logger::log(INFO, "Accepting a connection");
+	Logger::log(INFO, "Accepting a connection");
 	sockaddr_in client_addr = {};
 	socklen_t client_len = sizeof(client_addr);
 	int client_fd = accept(listen_fd, (struct sockaddr*)&client_addr, &client_len);
-  if (client_fd == -1) {
-    Logger::log(ERROR, "Error accepting connection: " + std::string(strerror(errno)));
-  }
-  else 
-  {
-    Logger::log(INFO, "Registering handler for connection");
-    // Create and register a RequestHandler for this client_fd
-    EventHandler* handler = new RequestHandler(client_fd, &reactor);
-    reactor.register_handler(handler);
-  }
+	if (client_fd == -1) {
+		Logger::log(ERROR, "Error accepting connection: " + std::string(strerror(errno)));
+	}
+	else 
+	{
+		Logger::log(INFO, "Registering handler for connection");
+		// Create and register a RequestHandler for this client_fd
+		EventHandler* handler = new RequestHandler(client_fd, &reactor);
+		reactor.register_handler(handler);
+	}
 }
 
 int AcceptHandler::get_handle() const {

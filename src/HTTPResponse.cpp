@@ -61,39 +61,39 @@ void HTTPResponse::sendRedirectResponse(const std::string& redirectLocation, int
 }
 
 void HTTPResponse::sendSuccessResponse(const std::string& statusCode, const std::string& contentType, const std::string& content, Cookie cookie, int client_fd) {
-    std::ostringstream responseStream;
+	std::ostringstream responseStream;
 
-    // Start building the HTTP response
-    responseStream << "HTTP/1.1 " << statusCode << "\r\n";
+	// Start building the HTTP response
+	responseStream << "HTTP/1.1 " << statusCode << "\r\n";
 
-    // Adding headers
-    responseStream << "Content-Type: " << contentType << "\r\n";
-    responseStream << "Content-Length: " << content.size() << "\r\n";
-     // Check if a cookie needs to be set
-    if (!cookie.getCookieName().empty()) {
-        responseStream << "Set-Cookie: " << cookie.getCookieString() << "\r\n";
-    }
+	// Adding headers
+	responseStream << "Content-Type: " << contentType << "\r\n";
+	responseStream << "Content-Length: " << content.size() << "\r\n";
+	// Check if a cookie needs to be set
+	if (!cookie.getCookieName().empty()) {
+		Logger::log(INFO, "Setting cookie: " + cookie.getCookieString());
+		responseStream << "Set-Cookie: " << cookie.getCookieString() << "\r\n";
+	}
 
-        // Inform the client that the connection will be closed after the response
-    responseStream << "Connection: close\r\n";
+	// Inform the client that the connection will be closed after the response
+	responseStream << "Connection: close\r\n";
 
-    // If you want to keep the connection alive, you can add Connection header
-    // responseStream << "Connection: keep-alive\r\n";
+	// If you want to keep the connection alive, you can add Connection header
+	// responseStream << "Connection: keep-alive\r\n";
+	// Header and content separation
+	responseStream << "\r\n";
 
-    // Header and content separation
-    responseStream << "\r\n";
+	// Append the actual content
+	responseStream << content;
 
-    // Append the actual content
-    responseStream << content;
+	// Convert the stream to a string
+	std::string response = responseStream.str();
 
-    // Convert the stream to a string
-    std::string response = responseStream.str();
-
-    // Send the response to the client
-    if (write(client_fd, response.c_str(), response.size()) <= 0)
-      Logger::log(ERROR, "Error sending response: " + std::string(strerror(errno)));
-    else
-      Logger::log(INFO, "Sent response with status code: " + statusCode);
+	// Send the response to the client
+	if (write(client_fd, response.c_str(), response.size()) <= 0)
+		Logger::log(ERROR, "Error sending response: " + std::string(strerror(errno)));
+	else
+		Logger::log(INFO, "Sent response with status code: " + statusCode);
 }
 
 std::string HTTPResponse::modifyHtmlContentForSession(const std::string& htmlContent, const SessionData& sessionData) {

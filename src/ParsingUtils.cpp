@@ -272,3 +272,10 @@ std::string ParsingUtils::getWebservRoot(void) {
   std::string cwd = getCurrentWorkingDirectory();
   return cwd + "/webserv";
 }
+
+std::string ParsingUtils::removeFinalSlash(const std::string& path) {
+  if (path.length() > 0 && path[path.length() - 1] == '/') {
+    return path.substr(0, path.length() - 1);
+  }
+  return path;
+}

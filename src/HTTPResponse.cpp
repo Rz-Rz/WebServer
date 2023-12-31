@@ -13,7 +13,6 @@ void HTTPResponse::sendErrorResponse(int errorCode, const Server* server, int cl
   if (server != NULL)
   {
     errorPageContent = server->getErrorPageManager().getErrorPage(errorCode);
-    std::cout << "Error page content: " << errorPageContent << std::endl;
     errorMessage = server->getErrorPageManager().errorCodeMessageParser(errorCode);
   } else {
     // Default error message and content
@@ -96,14 +95,14 @@ void HTTPResponse::sendSuccessResponse(const std::string& statusCode, const std:
 		Logger::log(INFO, "Sent response with status code: " + statusCode);
 }
 
-std::string HTTPResponse::modifyHtmlContentForSession(const std::string& htmlContent, const SessionData& sessionData) {
+std::string HTTPResponse::modifyHtmlContentForSession(const std::string& htmlContent, const SessionData* sessionData) {
     std::string modifiedContent = htmlContent;
     // Find a placeholder in your HTML where you want to insert session info
     size_t placeholderPos = modifiedContent.find("[SESSION_INFO]");
     if (placeholderPos != std::string::npos) {
         std::stringstream sessionInfo;
-        sessionInfo << "Session ID: " << sessionData.getSessionId() << "<br>"
-                    << "Request count: " << sessionData.getRequestCount();
+        sessionInfo << "Session ID: " << sessionData->getSessionId() << "<br>"
+                    << "Request count: " << sessionData->getRequestCount();
         modifiedContent.replace(placeholderPos, std::string("[SESSION_INFO]").length(), sessionInfo.str());
     }
     return modifiedContent;

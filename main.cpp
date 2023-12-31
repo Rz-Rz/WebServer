@@ -4,14 +4,14 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
-#include "Reactor.hpp"
-#include "AcceptHandler.hpp"
-#include "Logger.hpp"
 #include <cerrno>
 #include "ConfigurationParser.hpp"
 #include "SignalHandler.hpp"
 #include "ServerManager.hpp"
 #include "ParsingUtils.hpp"
+#include "Reactor.hpp"
+#include "AcceptHandler.hpp"
+#include "Logger.hpp"
 
 
 int main(int argc, char** argv) {
@@ -35,12 +35,12 @@ int main(int argc, char** argv) {
     Logger::log(ERROR, "Configuration error: " + std::string(e.what()));
     return 1;
   }
-  std::cout << "Number of servers to process: " << servers.size() << std::endl;
+  Logger::log(INFO, "Number of servers to process: " + ParsingUtils::toString(servers.size()));
   SignalHandler::getInstance().setServersMap(&servers);
   ServerManager::getInstance().setServersMap(&servers);
   for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
     Server* serverConfig = it->second;
-    std::cout << "Processing server: " << serverConfig->getServerName() << " with routes:" << std::endl;
+    Logger::log(INFO, "Processing server: " + serverConfig->getServerName() + " with routes:");
     serverConfig->printRoutes();
 
     // Iterate over each port in the server configuration

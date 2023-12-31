@@ -1,22 +1,22 @@
-#include "RequestHandler.hpp"
 #include <unistd.h>
 #include <string>
 #include <string.h>
 #include <iostream>
 #include <sys/epoll.h>
 #include <errno.h>
+#include <cstdlib>
+#include <sys/wait.h>
+#include <algorithm>
+#include "RequestHandler.hpp"
+#include "ServerManager.hpp"
+#include "Reactor.hpp"
+#include "HTTPResponse.hpp"
+#include "MultipartFormDataParser.hpp"
+#include "SystemUtils.hpp"
 #include "HTTPRequestParser.hpp"
 #include "Logger.hpp"
 #include "ErrorPageManager.hpp"
 #include "ParsingUtils.hpp"
-#include <cstdlib>
-#include "MultipartFormDataParser.hpp"
-#include "SystemUtils.hpp"
-#include <sys/wait.h>
-#include "ServerManager.hpp"
-#include "Reactor.hpp"
-#include "HTTPResponse.hpp"
-#include <algorithm>
 
 RequestHandler::RequestHandler(int fd, Reactor *reactor) : client_fd(fd), reactor(reactor) {}
 
@@ -27,13 +27,19 @@ RequestHandler::~RequestHandler() {
 void RequestHandler::handleSession() {
   SessionManager& sessionManager = ServerManager::getInstance().getSessionManager();
   std::string cookieHeader = parser.getHeader("Cookie");
-  std::cout << "Cookie header: " << cookieHeader << std::endl;
-
+  Logger::log(INFO, "Cookie header: " + cookieHeader);
   if (!cookieHeader.empty()) {
     std::string sessionId = extractSessionIdFromCookie(cookieHeader);
-    std::cout << "Session ID: " << sessionId << std::endl;
-    SessionData& sessionData = sessionManager.getSessionData(sessionId);
-    sessionData.incrementRequestCount();
+    Logger::log(INFO, "Session ID: " + sessionId);
+    SessionData* sessionData = sessionManager.getSessionData(sessionId);
+    if (sessionData != NULL) {
+      sessionData->incrementRequestCount();
+    }
+    else {
+      // A cookie already exist so let's register it and use it
+      sessionId = sessionManager.createSession(sessionId);
+      cookie = Cookie("session_id", sessionId);
+    }
   } else {
     std::string sessionId = sessionManager.createSession();
     // Initialize cookie with the new session ID
@@ -50,7 +56,7 @@ void RequestHandler::handle_event(uint32_t events) {
       if (bytes_read > 0) {
         try {
           parser.appendData(std::string(buffer, bytes_read));
-          std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
+          // std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
           Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
           HTTPResponse::sendErrorResponse(505, NULL, client_fd);
@@ -76,6 +82,7 @@ void RequestHandler::handle_event(uint32_t events) {
             closeConnection();
           }
           else {
+            handleSession();
             RequestHandler::handleRequest(server);
             if (shouldCloseConnection()) {
               Logger::log(INFO, "Should close connection");
@@ -157,14 +164,12 @@ int RequestHandler::get_handle() const {
 std::string RequestHandler::getFilePathFromUri(const Route& route, const std::string& uri) {
 	std::string rootPath = route.getRootDirectoryPath();
 	std::string filePath = ParsingUtils::removeFinalSlash(rootPath);
-	std::cout << "filepath: " << filePath << std::endl;
 	filePath = filePath + uri;
-	std::cout << "rootpath plus uri: " << filePath << std::endl;
 	if (ParsingUtils::isDirectory(filePath))
 	{
 		if (route.getHasDefaultFile()) {
-			std::cout << "route has default file" << std::endl;
 			std::string file = route.getDefaultFile();
+      Logger::log(INFO, "Serving default file: " + file + " for URI: " + uri);
 			if (file[0] == '/')
 				filePath += file.substr(1);
 			else
@@ -177,9 +182,9 @@ std::string RequestHandler::getFilePathFromUri(const Route& route, const std::st
 	if (route.getHasCGI())
 	{
 		filePath = route.getCGIPath();
+    Logger::log(INFO, "Serving CGI file: " + filePath + " for URI: " + uri);
 		return filePath;
 	}
-	std::cout << "filePath after default file: " << filePath << std::endl;
 	return filePath;
 }
 
@@ -202,8 +207,8 @@ std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::
 }
 
 void RequestHandler::handleRedirect(const Route& route) {
-  HTTPResponse::sendRedirectResponse(route.getRedirectLocation(), client_fd);
   Logger::log(INFO, "Redirecting to: " + route.getRedirectLocation());
+  HTTPResponse::sendRedirectResponse(route.getRedirectLocation(), client_fd);
 }
 
 void RequestHandler::handleDirectoryRequest(const Route& route, const Server* server)
@@ -267,7 +272,7 @@ std::string RequestHandler::getMimeType(const std::string& filePath) {
 
 void RequestHandler::handleFileRequest(const Route& route, const Server* server) {
   std::string filePath = getFilePathFromUri(route, parser.getUri());
-  std::cout << "File path after getFilePathFromUri: " << filePath << std::endl;
+  Logger::log(INFO, "Looking to GET: " + filePath);
   if (ParsingUtils::isDirectory(filePath))
   {
     HTTPResponse::sendErrorResponse(403, server, client_fd);
@@ -276,6 +281,16 @@ void RequestHandler::handleFileRequest(const Route& route, const Server* server)
   }
   if (ParsingUtils::doesPathExistAndReadable(filePath)) {
     std::string fileContent = ParsingUtils::readFile(filePath);
+    // handle file with session
+    SessionManager& sessionManager = ServerManager::getInstance().getSessionManager();
+    std::string cookieHeader = parser.getHeader("Cookie");
+    if (!cookieHeader.empty()) {
+      std::string sessionId = extractSessionIdFromCookie(cookieHeader);
+      SessionData* sessionData = sessionManager.getSessionData(sessionId);
+      if (sessionData != NULL)
+        fileContent = HTTPResponse::modifyHtmlContentForSession(fileContent, sessionData);
+    }
+    ServerManager::getInstance().getSessionManager().debugPrintSessions();
     HTTPResponse::sendSuccessResponse("200 OK", getMimeType(filePath), fileContent, cookie, client_fd);
     Logger::log(INFO, "File request on GET request: " + filePath); 
     return;
@@ -303,7 +318,6 @@ std::string RequestHandler::endWithSlash(const std::string& uri) {
 
 void RequestHandler::handleGetRequest(const Server* server) {
   std::string originalPath = removeQueryString(parser.getUri()); // Get the original URI
-  std::cout << "originalPath after removeQueryString: " << originalPath << std::endl;
   Route route;
   try {
     // First try to find the route directly with the original URI
@@ -311,7 +325,6 @@ void RequestHandler::handleGetRequest(const Server* server) {
   } catch (const std::out_of_range&) {
     // If not found, try extracting the directory path and then finding the route
     std::string directoryPath = extractDirectoryPath(originalPath);
-    std::cout << "directoryPath after extractDirectoryPath: " << directoryPath << std::endl;
     try {
       route = server->getRoute(directoryPath);
     } catch (const std::out_of_range& e) {
@@ -365,9 +378,9 @@ std::string RequestHandler::removeQueryString(const std::string& uri) {
 void RequestHandler::handleCGIRequest(const Route& route, const Server* server) {
   std::string queryString = extractQueryString(parser.getUri());
   std::string filePath = getFilePathFromUri(route, parser.getUri());
-  std::cout << "File path after getFilePathFromUri: " << filePath << std::endl;
   filePath = removeQueryString(filePath);
-  std::cout << "File path after removeQueryString: " << filePath << std::endl;
+  Logger::log(INFO, "Looking for: " + filePath);
+  Logger::log(INFO, "queryString for CGI : " + queryString);
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
@@ -380,7 +393,6 @@ void RequestHandler::handleCGIRequest(const Route& route, const Server* server) 
     HTTPResponse::sendErrorResponse(403, server, client_fd);
     return;
   }
-  std::cout << "queryString : " << queryString << std::endl;
   setCGIEnvironment(queryString);
   // File exists and is readable and executable
   Logger::log(INFO, "CGI request on GET request: " + filePath);
@@ -617,7 +629,6 @@ std::string RequestHandler::extractDirectoryPath(const std::string& filePath) {
 
 void RequestHandler::handleDeleteRequest(const Server* server) {
 	std::string originalPath = removeQueryString(parser.getUri()); // Get the original URI
-	std::cout << "originalPath after removeQueryString: " << originalPath << std::endl;
 	Route route;
 	try {
 		// First try to find the route directly with the original URI
@@ -625,7 +636,6 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
 	} catch (const std::out_of_range&) {
 		// If not found, try extracting the directory path and then finding the route
 		std::string directoryPath = extractDirectoryPath(originalPath);
-		std::cout << "directoryPath after extractDirectoryPath: " << directoryPath << std::endl;
 		try {
 			route = server->getRoute(directoryPath);
 		} catch (const std::out_of_range& e) {
@@ -637,6 +647,7 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
 	}
 
 	std::string filePath = getFilePathFromUri(route, parser.getUri());
+  Logger::log(INFO, "Looking to DELETE: " + filePath);
 	if (!route.getDeleteMethod()) {
 		HTTPResponse::sendErrorResponse(405, server, client_fd);
 		Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());

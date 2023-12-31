@@ -65,8 +65,8 @@ void Reactor::deregisterHandler(int fd) {
 void Reactor::event_loop() {
 	time_t lastCheckTime = time(NULL);
 	while (true) {
-		epoll_event events[10];
-		int nfds = epoll_wait(epfd, events, 10, -1);
+		epoll_event events[2000];
+		int nfds = epoll_wait(epfd, events, 2000, -1);
 		if (nfds == -1) {
 			Logger::log(ERROR, "Error in epoll_wait: " + std::string(strerror(errno)));
 			return;

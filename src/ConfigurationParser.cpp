@@ -451,7 +451,6 @@ void ConfigurationParser::parseRoot(std::string& line, Route& route) {
     throw ConfigurationParser::InvalidConfigurationException("Relative paths outside server root are forbidden: " + root);
   }
   std::string fullPath = ParsingUtils::getWebservRoot() + root;
-  std::cout << "THIS IS THE FULL PATH:" << fullPath << std::endl;
   if (ParsingUtils::doesPathExist(fullPath) == false) {
     Logger::log(WARNING, "root path does not exist: " + fullPath + " reverting to default root.");
     return;
@@ -728,7 +727,7 @@ void ConfigurationParser::checkForDuplicateRoutes(const std::map<std::string, Se
 }
 void ConfigurationParser::cleanupServers(std::map<std::string, Server*>& servers) {
   for (std::map<std::string, Server*>::iterator it = servers.begin(); it != servers.end(); ++it) {
-    std::cout << "DELETING SERVER : " << it->first << std::endl;
+    Logger::log(INFO, "DELETING SERVER : " + it->first);
     delete it->second; // Delete the Server object
   }
   servers.clear(); // Clear the map

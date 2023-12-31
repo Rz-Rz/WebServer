@@ -1,5 +1,6 @@
 #include "SignalHandler.hpp"
 #include "Logger.hpp"
+#include "ParsingUtils.hpp"
 
 SignalHandler& SignalHandler::getInstance() {
   static SignalHandler instance;
@@ -11,21 +12,20 @@ void SignalHandler::setupSignalHandlers() {
 }
 
 void SignalHandler::cleanup() {
-  std::cout << "Cleaning up resources..." << std::endl;
+  Logger::log(INFO, "Cleaning up resources...");
   if (reactor) {
     Logger::log(INFO, "Cleaning up reactor");
     reactor->~Reactor();
   }
   if (resources.size() > 0) {
     for (std::vector<EventHandler*>::iterator it = resources.begin(); it != resources.end(); ++it) {
-      std::cout << "Deleting resource: " << *it << std::endl;
       delete *it; // Free EventHandler instances
     }
     resources.clear();
   }
   if (serversMap) {
     for (std::map<std::string, Server*>::iterator it = serversMap->begin(); it != serversMap->end(); ++it) {
-      std::cout << "Deleting server: " << it->first << std::endl;
+      Logger::log(INFO, "Deleting server: " + it->first);
       delete it->second; // Free Server instances
     }
     serversMap->clear();
@@ -33,16 +33,16 @@ void SignalHandler::cleanup() {
 }
 
 void SignalHandler::setServersMap(std::map<std::string, Server*>* map) {
-  std::cout << "Setting serversMap: " << map->size() << std::endl;
+  Logger::log(INFO, "Setting serversMap: " + ParsingUtils::toString(map->size()) + " servers.");
   serversMap = map;
   for (std::map<std::string, Server*>::iterator it = serversMap->begin(); it != serversMap->end(); ++it) {
-    std::cout << "Server ready for cleanup: " << it->first << std::endl;
+    Logger::log(INFO, "Server ready for cleanup: " + it->first);
   }
-  std::cout << "serversMap set with " << serversMap->size() << " servers." << std::endl;
+  Logger::log(INFO, "serversMap set with " + ParsingUtils::toString(serversMap->size()) + " servers.");
 }
 
 void SignalHandler::handleSignal(int signal) {
-  std::cout << "Signal " << signal << " received." << std::endl;
+  Logger::log(INFO, "Signal " + ParsingUtils::toString(signal) + " received.");
   getInstance().cleanup();
   exit(signal);
 }

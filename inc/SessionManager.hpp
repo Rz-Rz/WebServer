@@ -12,8 +12,11 @@ class SessionManager {
   public:
     ~SessionManager();
     std::string createSession();
-    SessionData& getSessionData(const std::string& sessionId);
+    std::string createSession(const std::string& sessionId); // overload in cash of cached cookie, but server was restarted
+
+    SessionData* getSessionData(const std::string& sessionId);
     std::string generateUniqueID();
+    void debugPrintSessions() const;
     void cleanupSessions();
 };
 

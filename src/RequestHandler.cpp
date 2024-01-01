@@ -561,7 +561,11 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
   }
   fileStream << fileContent;
   fileStream.close();
-  HTTPResponse::sendSuccessResponse("200 OK", "text/html", "File uploaded successfully", cookie, client_fd);
+  std::string successPageHtml = 
+	  "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Upload Success</title></head><body>"
+	  "<h1>Upload Successful</h1><p>Your file has been uploaded successfully.</p>"
+	  "<footer>&copy; 2023 My Website</footer></body></html>";
+  HTTPResponse::sendSuccessResponse("200 OK", "text/html", successPageHtml, cookie, client_fd);
   return;
 }
 

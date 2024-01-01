@@ -50,9 +50,12 @@ std::string SessionManager::createSession(const std::string& sessionId) {
 
 
 void SessionManager::cleanupSessions() {
-  for (std::map<std::string, SessionData>::iterator it = sessions.begin(); it != sessions.end(); ++it) {
+  for (std::map<std::string, SessionData>::iterator it = sessions.begin(); it != sessions.end(); ) {
     if (it->second.getRequestCount() == 0) {
-      sessions.erase(it);
+      sessions.erase(it++);
+    }
+    else {
+      ++it;
     }
   }
 }

@@ -253,20 +253,18 @@ std::string RequestHandler::getMimeType(const std::string& filePath) {
     size_t dotPos = filePath.find_last_of('.');
     if (dotPos != std::string::npos) {
         std::string extension = filePath.substr(dotPos + 1);
-        Logger::log(DEBUG, "Extracted file extension: " + extension);
 
         std::ostringstream oss;
         oss << localMimeTypes.size();
-        Logger::log(DEBUG, "Local MimeTypes map size: " + oss.str());
 
         std::map<std::string, std::string>::const_iterator it = localMimeTypes.find(extension);
         if (it != localMimeTypes.end()) {
-            Logger::log(DEBUG, "MIME type found: " + it->second);
+            Logger::log(INFO, "MIME type found: " + it->second);
             return it->second;
         }
     }
 
-    Logger::log(WARNING, "Returning default MIME type for extension: " + filePath.substr(dotPos + 1));
+    Logger::log(INFO, "Returning default MIME type for extension: " + filePath.substr(dotPos + 1));
     return "application/octet-stream";
 }
 

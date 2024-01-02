@@ -270,7 +270,7 @@ bool ParsingUtils::hasExecutePermissions(const std::string &path)
 
 std::string ParsingUtils::getWebservRoot(void) {
   std::string cwd = getCurrentWorkingDirectory();
-  return cwd + "/webserv";
+  return cwd + "/webserver";
 }
 
 std::string ParsingUtils::removeFinalSlash(const std::string& path) {

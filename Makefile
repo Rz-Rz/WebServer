@@ -9,7 +9,7 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinc -g3
 TEST_OBJECTS = $(TEST_SOURCES:.cpp=.o)
 
 # Target binary name
-TARGET = webserver
+TARGET = webserv
 
 # Source files
 SOURCES = $(wildcard src/*.cpp) main.cpp

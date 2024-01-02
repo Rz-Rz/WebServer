@@ -563,8 +563,8 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
   fileStream.close();
   std::string successPageHtml = 
 	  "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Upload Success</title></head><body>"
-	  "<h1>Upload Successful</h1><p>Your file has been uploaded successfully.</p>"
-	  "<footer>&copy; 2023 My Website</footer></body></html>";
+	  "<h1>Upload Successful</h1><p>200 OK - Your file has been uploaded successfully.</p>"
+	  "</body></html>";
   HTTPResponse::sendSuccessResponse("200 OK", "text/html", successPageHtml, cookie, client_fd);
   return;
 }
@@ -595,7 +595,7 @@ void RequestHandler::handlePostRequest(const Server* server) {
   }
   else {
     Logger::log(INFO, "POST request on URI: " + parser.getUri());
-    HTTPResponse::sendSuccessResponse("200 OK", "text/html", "POST request received with body: " + parser.getBody(), cookie, client_fd);
+    HTTPResponse::sendSuccessResponse("200 OK", "text/html", " 200 OK - POST request received with body: " + parser.getBody(), cookie, client_fd);
   }
 }
 
@@ -677,7 +677,7 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
 		return;
 	}
 
-	HTTPResponse::sendSuccessResponse("200 OK", "text/html", "File deleted successfully", cookie, client_fd);
+	HTTPResponse::sendSuccessResponse("200 OK", "text/html", "200 - OK File deleted successfully", cookie, client_fd);
 	return;
 }
 

@@ -15,8 +15,8 @@ Route::Route()
     this->hasRootDirectoryPath = false;
     this->maxBodySize = 1000000;
     std::string cwd = ParsingUtils::getCurrentWorkingDirectory();
-    this->rootDirectoryPath = cwd + "/webserv/";
-    this->uploadLocation = cwd + "/webserv/uploads/";
+    this->rootDirectoryPath = cwd + "/webserver/";
+    this->uploadLocation = cwd + "/webserver/uploads/";
 }
 
 // Setters

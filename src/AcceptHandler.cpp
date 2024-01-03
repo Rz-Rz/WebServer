@@ -16,7 +16,9 @@ AcceptHandler::AcceptHandler(int fd, Reactor &reactor) : reactor(reactor) {
   EventHandler::setHandle(fd);
 }
 
-AcceptHandler::~AcceptHandler() {}
+AcceptHandler::~AcceptHandler() {
+	SystemUtils::closeUtil(EventHandler::getHandle());
+}
 
 void AcceptHandler::handleEvent(uint32_t /*events*/) {
 	Logger::log(INFO, "Accepting a connection");

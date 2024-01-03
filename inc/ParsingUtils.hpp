@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <fcntl.h>
+#include <errno.h>
 
 
 class ParsingUtils {
@@ -39,6 +41,9 @@ class ParsingUtils {
     static std::string getCurrentWorkingDirectory(void);
     static std::string getWebservRoot(void);
     static std::string removeFinalSlash(const std::string& path);
+    static bool isFdClosed(int fd) {
+    return (fcntl(fd, F_GETFD) == -1 && errno == EBADF);
+}
 
     // url Utils
     static bool isAbsoluteUrl(const std::string& url);

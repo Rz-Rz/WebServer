@@ -380,14 +380,13 @@ void RequestHandler::handleCGIRequest(const Route& route, const Server* server) 
     HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
     return;
   }
-  CgiHandler* cgiHandler = new CgiHandler(filePath, queryString, EventHandler::getHandle());
+  CgiHandler* cgiHandler = new CgiHandler(filePath, queryString, EventHandler::getHandle(), reactor);
   closeConnectionFlag = false;
   // File exists and is readable and executable
   Logger::log(INFO, "CGI request on GET request: " + filePath);
   reactor->registerHandler(cgiHandler);
   return;
 }
-
 
 std::string RequestHandler::extractQueryString(const std::string& uri) {
     size_t queryStringPos = uri.find('?');

@@ -3,6 +3,7 @@
 #include "Logger.hpp"
 #include "HTTPResponse.hpp"
 #include "ParsingUtils.hpp"
+#include "SignalHandler.hpp"
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -47,7 +48,6 @@ void CgiHandler::handleEvent(uint32_t events) {
       // Process the output, e.g., send as HTTP response
       Cookie cookie("", "");
       HTTPResponse::sendSuccessResponse("200 OK", "text/html", output, cookie, client_fd);
-
       closeConnection();
     }
   }

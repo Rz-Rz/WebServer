@@ -15,7 +15,6 @@
 #include <cstring>
 #include <stdlib.h>
 
-#define PATH "configs/multiple_servers_with_different_ports.ini"
 
 int main(int argc, char** argv) {
 	char    config_file_path[2048];
@@ -29,7 +28,7 @@ int main(int argc, char** argv) {
   } else if (argc == 1)
   {
     Logger::log(INFO, "Using default config file !");
-    memcpy(config_file_path, "configs/all_routes.ini", 24);
+    memcpy(config_file_path, "configs/all_routes.ini", strlen("configs/all_routes.ini") + 1);
   }
   else
   {

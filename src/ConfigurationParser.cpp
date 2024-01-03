@@ -428,10 +428,6 @@ void ConfigurationParser::parseRedirect(std::string& line, Route& route) {
     return;
   }
   ParsingUtils::trimAndLower(redirect);
-  if (!ParsingUtils::isAbsoluteUrl(redirect) && redirect[0] != '/') {
-    Logger::log(WARNING, "redirect must start with a '/', prefixed " + redirect + " with a '/'"); 
-    ParsingUtils::setPrefixString(redirect, "/");
-  }
   Logger::log(INFO, "Redirect: " + redirect + " for route " + route.getRoutePath());
   route.setRedirectLocation(redirect);
   route.setRedirect(true);

@@ -156,7 +156,6 @@ Server* RequestHandler::findServerForHost(const std::string& host, const std::ma
     return NULL;
 }
 
-
 std::string RequestHandler::getFilePathFromUri(const Route& route, const std::string& uri) {
 	std::string rootPath = route.getRootDirectoryPath();
 	std::string filePath = ParsingUtils::removeFinalSlash(rootPath);
@@ -185,21 +184,24 @@ std::string RequestHandler::getFilePathFromUri(const Route& route, const std::st
 }
 
 std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath) {
-  std::ostringstream html;
-  // Basic HTML structure
-  html << "<html><head><title>Directory Listing of " << directoryPath << "</title></head><body>";
-  html << "<h2>Directory Listing of " << directoryPath << "</h2>";
-  html << "<ul>";
-  // List each item in the directory
-  for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it) {
-    // Assuming directoryPath is formatted correctly (e.g., ends with '/')
-    std::string itemPath = directoryPath + *it;
-    // Create a list item with a link for each entry
-    html << "<li><a href=\"" << itemPath << "\">" << *it << "</a></li>";
-  }
-  html << "</ul>";
-  html << "</body></html>";
-  return html.str();
+    std::ostringstream html;
+    html << "<html><head><title>Directory Listing of " << directoryPath << "</title></head><body>";
+    html << "<h2>Directory Listing of " << directoryPath << "</h2><ul>";
+
+    // Ensure directoryPath ends with '/'
+    std::string formattedDirectoryPath = directoryPath;
+    if (formattedDirectoryPath.empty() || formattedDirectoryPath[formattedDirectoryPath.length() - 1] != '/') {
+        formattedDirectoryPath += '/';
+    }
+
+    // List each item in the directory
+    for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it) {
+        std::string itemPath = formattedDirectoryPath + *it;
+        html << "<li><a href=\"" << itemPath << "\">" << *it << "</a></li>";
+    }
+
+    html << "</ul></body></html>";
+    return html.str();
 }
 
 void RequestHandler::handleRedirect(const Route& route) {
@@ -328,7 +330,10 @@ void RequestHandler::handleGetRequest(const Server* server) {
       return;
     }
   }
-
+  bool isFileRequest = false;
+  std::string fp = getFilePathFromUri(route, parser.getUri());
+  if (ParsingUtils::isRegularFile(fp))
+    isFileRequest = true;
 
   if (!route.getGetMethod()) {
     // Method not allowed for this route
@@ -340,7 +345,7 @@ void RequestHandler::handleGetRequest(const Server* server) {
     handleRedirect(route);
     return;
   }
-  else if (route.getDirectoryListing() && !route.getHasDefaultFile()) {
+  else if (route.getDirectoryListing() && !route.getHasDefaultFile() && !isFileRequest) {
     handleDirectoryRequest(route, server);
     return;
   }

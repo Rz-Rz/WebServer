@@ -49,6 +49,7 @@ class ConfigurationParser {
     static void checkForDuplicatePorts(const std::map<std::string, Server*>& servers);
     static void checkForDuplicateRoutes(const std::map<std::string, Server*>& servers);
     static void checkValidity(const std::map<std::string, Server*>& servers);
+    static void checkForPortsValidity(const std::map<std::string, Server*>& servers);
 
     static void cleanupServers(std::map<std::string, Server*>& servers);
 

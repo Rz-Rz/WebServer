@@ -12,22 +12,35 @@
 #include "Reactor.hpp"
 #include "AcceptHandler.hpp"
 #include "Logger.hpp"
+#include <cstring>
+#include <stdlib.h>
 
+#define PATH "configs/multiple_servers_with_different_ports.ini"
 
 int main(int argc, char** argv) {
+	char    config_file_path[2048];
   SignalHandler::getInstance().setupSignalHandlers();
   Logger::log(INFO, "Server starting");
 
-  if (argc != 2) {
+  if (argc > 2) {
     Logger::log(ERROR, "Usage error. Correct format: <executable> <config_file>");
     std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
     return 1;
+  } else if (argc == 1)
+  {
+    Logger::log(INFO, "Using default config file !");
+    memcpy(config_file_path, "configs/all_routes.ini", 24);
+  }
+  else
+  {
+    Logger::log(INFO, "Using default config file !");
+    memcpy(config_file_path, argv[1], strlen(argv[1]) + 1);
   }
 
   std::map<std::string, Server*> servers;
   Reactor reactor;
   try {
-    servers = ConfigurationParser::parse(argv[1]);
+    servers = ConfigurationParser::parse(config_file_path);
     ConfigurationParser::checkValidity(servers);
     Logger::log(INFO, "Configuration file parsed successfully");
   } catch (const std::exception& e) {

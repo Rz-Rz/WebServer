@@ -95,6 +95,7 @@ void ConfigurationParser::checkValidity(const std::map<std::string, Server*>& se
     }
 
     // Check for duplicate server names, ports, and routes
+    ConfigurationParser::checkForPortsValidity(servers);
     ConfigurationParser::checkForDuplicateServerNames(servers);
     ConfigurationParser::checkForDuplicatePorts(servers);
     ConfigurationParser::checkForDuplicateRoutes(servers);
@@ -731,5 +732,16 @@ void ConfigurationParser::cleanupServers(std::map<std::string, Server*>& servers
     delete it->second; // Delete the Server object
   }
   servers.clear(); // Clear the map
+}
+
+void ConfigurationParser::checkForPortsValidity(const std::map<std::string, Server*>& servers)
+{
+  for (std::map<std::string, Server*>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
+    const std::vector<int>& ports = it->second->getPorts();
+    if (ports.size() == 0) {
+      Logger::log(ERROR, "Missing port configuration in server \"" + it->second->getServerName() + "\"");
+      throw ConfigurationParser::InvalidConfigurationException("Missing port configuration in server \"" + it->second->getServerName() + "\"");
+    }
+  }
 }
 

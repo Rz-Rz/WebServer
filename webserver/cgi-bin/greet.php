@@ -1,7 +1,6 @@
 #!/usr/bin/env php
 <?php
 // Ensure that the content type header is set to HTML
-while(1);
 header('Content-Type: text/html');
 
 // Parse the QUERY_STRING environment variable

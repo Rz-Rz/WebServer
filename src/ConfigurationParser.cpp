@@ -46,10 +46,10 @@ std::map<std::string, Server*> ConfigurationParser::parse(const std::string& fil
           isParsingRoute = false;
         }
         // Save the previously parsed server configuration
-        if (!(parsedConfigs.insert(std::make_pair(currentServerConfig->getServerName(), currentServerConfig)).second)) {
-          Logger::log(ERROR, "Duplicate server name: " + currentServerConfig->getServerName());
-          delete currentServerConfig; // Important to avoid memory leak
-        }
+	if (!(parsedConfigs.insert(std::make_pair(currentServerConfig->getServerName(), currentServerConfig)).second)) {
+		Logger::log(ERROR, "Duplicate server name: " + currentServerConfig->getServerName());
+		delete currentServerConfig; // Important to avoid memory leak
+	}
         currentServerConfig = new Server(); // Create a new Server object for the next server
       }
       isParsingServer = true;
@@ -77,10 +77,10 @@ std::map<std::string, Server*> ConfigurationParser::parse(const std::string& fil
     currentServerConfig->addRoute(currentRouteConfig.getRoutePath(), currentRouteConfig);
   }
   if (isParsingServer) {
-    if (!(parsedConfigs.insert(std::make_pair(currentServerConfig->getServerName(), currentServerConfig)).second)) {
-      Logger::log(ERROR, "Duplicate server name: " + currentServerConfig->getServerName());
-      delete currentServerConfig; // Important to avoid memory leak
-    }
+	  if (!(parsedConfigs.insert(std::make_pair(currentServerConfig->getServerName(), currentServerConfig)).second)) {
+		  Logger::log(ERROR, "Duplicate server name: " + currentServerConfig->getServerName());
+		  delete currentServerConfig; // Important to avoid memory leak
+	  }
   } else {
     delete currentServerConfig; // Delete if not used
   }

@@ -8,14 +8,12 @@
 
 class AcceptHandler : public EventHandler {
 	private:
-		int listen_fd;
 		Reactor& reactor;
 
 	public:
 		explicit AcceptHandler(int fd, Reactor& reactor);
 		~AcceptHandler();
-		void handle_event(uint32_t events);
-		int get_handle() const;
+		void handleEvent(uint32_t events);
 		void closeConnection(void);
 };
 #endif

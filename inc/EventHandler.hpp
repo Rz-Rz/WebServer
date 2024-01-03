@@ -3,11 +3,16 @@
 #include <stdint.h>
 
 class EventHandler {
+  protected:
+    int handle;
+
 	public:
-		virtual void handle_event(uint32_t events) = 0; 
-		virtual int get_handle() const = 0;
+    EventHandler();
+		virtual void handleEvent(uint32_t events) = 0; 
     virtual void closeConnection(void) = 0;
-		virtual ~EventHandler() {};
+		virtual ~EventHandler();
+    virtual void setHandle(int fd);
+    virtual int &getHandle(void);
 
 };
 #endif

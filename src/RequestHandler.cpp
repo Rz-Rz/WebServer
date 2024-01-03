@@ -5,7 +5,6 @@
 #include <sys/epoll.h>
 #include <errno.h>
 #include <cstdlib>
-#include <sys/wait.h>
 #include <algorithm>
 #include "RequestHandler.hpp"
 #include "ServerManager.hpp"
@@ -17,12 +16,13 @@
 #include "Logger.hpp"
 #include "ErrorPageManager.hpp"
 #include "ParsingUtils.hpp"
+#include "CgiHandler.hpp"
 
-RequestHandler::RequestHandler(int fd, Reactor *reactor) : client_fd(fd), reactor(reactor) {}
-
-RequestHandler::~RequestHandler() {
-  SystemUtils::closeUtil(client_fd);
+RequestHandler::RequestHandler(int fd, Reactor *reactor) : reactor(reactor), closeConnectionFlag (true) {
+  EventHandler::setHandle(fd);
 }
+
+RequestHandler::~RequestHandler() {}
 
 void RequestHandler::handleSession() {
   SessionManager& sessionManager = ServerManager::getInstance().getSessionManager();
@@ -47,29 +47,29 @@ void RequestHandler::handleSession() {
   }
 }
 
-void RequestHandler::handle_event(uint32_t events) {
+void RequestHandler::handleEvent(uint32_t events) {
   if (events & EPOLLIN) {
     char buffer[1024];
 
     while (true) {
-      ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer));
+      ssize_t bytes_read = read(EventHandler::getHandle(), buffer, sizeof(buffer));
       if (bytes_read > 0) {
         try {
           parser.appendData(std::string(buffer, bytes_read));
           // std::cout << "PACKET RECV ----" << std::endl << std::string(buffer, bytes_read) << std::cout << "PACKET END ----" << std::endl;
         } catch (const HTTPRequestParser::InvalidHTTPVersionException& e) {
           Logger::log(ERROR, std::string("Error Parsing HTTP Request: ") + e.what());
-          HTTPResponse::sendErrorResponse(505, NULL, client_fd);
+          HTTPResponse::sendErrorResponse(505, NULL, EventHandler::getHandle());
           closeConnection();
           break;
         }
         catch (const HTTPRequestParser::InvalidMethodException& e) {
           Logger::log(ERROR, "Error Parsing HTTP Request: " + std::string(e.what()));
-          HTTPResponse::sendErrorResponse(405, NULL, client_fd);
+          HTTPResponse::sendErrorResponse(405, NULL, EventHandler::getHandle());
           closeConnection();
           break;
         }
-        reactor->updateLastActivity(client_fd);
+        reactor->updateLastActivity(EventHandler::getHandle());
         // Check if the entire request has been received
         if (parser.isCompleteRequest()) {
           // std::cout << "PARSED DATA" << std::endl << parser.requestData << std::endl << "END PARSED DATA" << std::endl;
@@ -78,7 +78,7 @@ void RequestHandler::handle_event(uint32_t events) {
           if (server == NULL)
           {
             Logger::log(ERROR, "No matching server found for request:" + parser.getUri());
-            HTTPResponse::sendErrorResponse(400, NULL, client_fd);
+            HTTPResponse::sendErrorResponse(400, NULL, EventHandler::getHandle());
             closeConnection();
           }
           else {
@@ -157,10 +157,6 @@ Server* RequestHandler::findServerForHost(const std::string& host, const std::ma
 }
 
 
-int RequestHandler::get_handle() const {
-  return client_fd;
-}
-
 std::string RequestHandler::getFilePathFromUri(const Route& route, const std::string& uri) {
 	std::string rootPath = route.getRootDirectoryPath();
 	std::string filePath = ParsingUtils::removeFinalSlash(rootPath);
@@ -208,7 +204,7 @@ std::string RequestHandler::generateDirectoryListingPage(const std::vector<std::
 
 void RequestHandler::handleRedirect(const Route& route) {
   Logger::log(INFO, "Redirecting to: " + route.getRedirectLocation());
-  HTTPResponse::sendRedirectResponse(route.getRedirectLocation(), client_fd);
+  HTTPResponse::sendRedirectResponse(route.getRedirectLocation(), EventHandler::getHandle());
 }
 
 void RequestHandler::handleDirectoryRequest(const Route& route, const Server* server)
@@ -216,12 +212,12 @@ void RequestHandler::handleDirectoryRequest(const Route& route, const Server* se
       std::string directoryPath = getFilePathFromUri(route, parser.getUri());
       if (!ParsingUtils::doesPathExist(directoryPath)) {
         Logger::log(ERROR, "Directory does not exist: " + directoryPath);
-        HTTPResponse::sendErrorResponse(403, server, client_fd);
+        HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
         return;
       }
       if (!ParsingUtils::hasReadPermissions(directoryPath)) {
         Logger::log(ERROR, "Directory is not readable: " + directoryPath);
-        HTTPResponse::sendErrorResponse(403, server, client_fd);
+        HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
         return;
       }
       // Directory exists and is readable
@@ -231,11 +227,11 @@ void RequestHandler::handleDirectoryRequest(const Route& route, const Server* se
         contents = ParsingUtils::getDirectoryContents(directoryPath);
       } catch (const std::exception& e) {
         Logger::log(ERROR, "500 - Error reading directory contents: " + std::string(e.what()));
-        HTTPResponse::sendErrorResponse(500, server, client_fd);
+        HTTPResponse::sendErrorResponse(500, server, EventHandler::getHandle());
         return;
       }
       std::string directoryListingPage = generateDirectoryListingPage(contents, parser.getUri());
-      HTTPResponse::sendSuccessResponse("200 OK", "text/html", directoryListingPage, cookie, client_fd);
+      HTTPResponse::sendSuccessResponse("200 OK", "text/html", directoryListingPage, cookie, EventHandler::getHandle());
       return;
 }
 
@@ -273,7 +269,7 @@ void RequestHandler::handleFileRequest(const Route& route, const Server* server)
   Logger::log(INFO, "Looking to GET: " + filePath);
   if (ParsingUtils::isDirectory(filePath))
   {
-    HTTPResponse::sendErrorResponse(403, server, client_fd);
+    HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
     Logger::log(ERROR, "403 - Directory listing is not enabled: " + filePath);
     return;
   }
@@ -289,11 +285,11 @@ void RequestHandler::handleFileRequest(const Route& route, const Server* server)
         fileContent = HTTPResponse::modifyHtmlContentForSession(fileContent, sessionData);
     }
     ServerManager::getInstance().getSessionManager().debugPrintSessions();
-    HTTPResponse::sendSuccessResponse("200 OK", getMimeType(filePath), fileContent, cookie, client_fd);
+    HTTPResponse::sendSuccessResponse("200 OK", getMimeType(filePath), fileContent, cookie, EventHandler::getHandle());
     Logger::log(INFO, "File request on GET request: " + filePath); 
     return;
   } else {
-    HTTPResponse::sendErrorResponse(404, server, client_fd);
+    HTTPResponse::sendErrorResponse(404, server, EventHandler::getHandle());
     Logger::log(ERROR, "404 - File not found: " + filePath);
     return;
   }
@@ -327,7 +323,7 @@ void RequestHandler::handleGetRequest(const Server* server) {
       route = server->getRoute(directoryPath);
     } catch (const std::out_of_range& e) {
       // No route found for either the original URI or the directory path
-      HTTPResponse::sendErrorResponse(404, server, client_fd);
+      HTTPResponse::sendErrorResponse(404, server, EventHandler::getHandle());
       Logger::log(ERROR, "404 - No route found for URI: " + originalPath);
       return;
     }
@@ -336,7 +332,7 @@ void RequestHandler::handleGetRequest(const Server* server) {
 
   if (!route.getGetMethod()) {
     // Method not allowed for this route
-    HTTPResponse::sendErrorResponse(405, server, client_fd);
+    HTTPResponse::sendErrorResponse(405, server, EventHandler::getHandle());
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
@@ -358,13 +354,6 @@ void RequestHandler::handleGetRequest(const Server* server) {
   }
 }
 
-void RequestHandler::setCGIEnvironment(const std::string& queryString) {
-  if (queryString.empty()) {
-    return;
-  }
-  setenv("QUERY_STRING", queryString.c_str(), 1);
-}
-
 std::string RequestHandler::removeQueryString(const std::string& uri) {
   size_t pos = uri.find('?');
   if (pos != std::string::npos) {
@@ -378,74 +367,27 @@ void RequestHandler::handleCGIRequest(const Route& route, const Server* server) 
   std::string filePath = getFilePathFromUri(route, parser.getUri());
   filePath = removeQueryString(filePath);
   Logger::log(INFO, "Looking for: " + filePath);
-  Logger::log(INFO, "queryString for CGI : " + queryString);
+  Logger::log(INFO, "Query string: " + queryString);
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "404 - File not found: " + filePath);
-    HTTPResponse::sendErrorResponse(404, server, client_fd);
+    HTTPResponse::sendErrorResponse(404, server, EventHandler::getHandle());
     return;
   }
 
   if (!ParsingUtils::hasExecutePermissions(filePath)) {
     Logger::log(ERROR, "403 - File is not executable: " + filePath);
-    HTTPResponse::sendErrorResponse(403, server, client_fd);
+    HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
     return;
   }
-  setCGIEnvironment(queryString);
+  CgiHandler* cgiHandler = new CgiHandler(filePath, queryString, EventHandler::getHandle());
+  closeConnectionFlag = false;
   // File exists and is readable and executable
   Logger::log(INFO, "CGI request on GET request: " + filePath);
-  std::string output = RequestHandler::executeCGI(filePath);
-  HTTPResponse::sendSuccessResponse("200 OK", "text/html", output, cookie, client_fd);
+  reactor->registerHandler(cgiHandler);
   return;
 }
 
-std::string RequestHandler::executeCGI(const std::string& filePath) {
-    int pipefd[2];
-    pid_t pid;
-    char buf;
-
-    // Create a pipe for the child process's output
-    if (pipe(pipefd) == -1) {
-        throw std::runtime_error("Failed to create pipe");
-    }
-
-    // Fork the current process
-    pid = fork();
-    if (pid == -1) {
-        throw std::runtime_error("Failed to fork process");
-    }
-
-    if (pid == 0) {
-        // Child process
-        // Close the read-end of the pipe, we're not going to read from it
-        SystemUtils::closeUtil(pipefd[0]);          
-        // Redirect stdout to the write-end of the pipe
-        dup2(pipefd[1], STDOUT_FILENO);
-        SystemUtils::closeUtil(pipefd[1]);
-        // Convert filePath to a format suitable for execve
-        char* execArgs[2];
-        execArgs[0] = const_cast<char*>(filePath.c_str());
-        execArgs[1] = NULL;  // execve expects a NULL terminated array
-        // Execute the CGI script
-        execve(execArgs[0], execArgs, environ);
-        // Use _exit to terminate the child process if execve fails
-        _exit(EXIT_FAILURE);
-    } else {
-        // Parent process
-        // Close the write-end of the pipe, we're not going to write to it
-        SystemUtils::closeUtil(pipefd[1]);          
-        // Read the output of the CGI script from the read-end of the pipe
-        std::ostringstream stream;
-        while (read(pipefd[0], &buf, 1) > 0) {
-            stream << buf;
-        }
-        // Close the read-end of the pipe
-        SystemUtils::closeUtil(pipefd[0]);          
-        // Wait for the child process to finish
-        waitpid(pid, NULL, 0);    
-        return stream.str();
-    }
-}
 
 std::string RequestHandler::extractQueryString(const std::string& uri) {
     size_t queryStringPos = uri.find('?');
@@ -463,13 +405,13 @@ bool RequestHandler::isPayloadTooLarge(const Server* server, const Route& route)
         if (route.getHasMaxBodySize())
         {
           if (contentLength > route.getMaxBodySize()) {
-            HTTPResponse::sendErrorResponse(413, server, client_fd);
+            HTTPResponse::sendErrorResponse(413, server, EventHandler::getHandle());
             Logger::log(ERROR, "413 - Payload is too large: " + contentLengthHeader + " Maximum allowed: " + ParsingUtils::toString(route.getMaxBodySize()) + " bytes");
             return true; // Payload is too large
           }
         }
         if (contentLength > server->getMaxClientBodySize()) {
-            HTTPResponse::sendErrorResponse(413, server, client_fd);
+            HTTPResponse::sendErrorResponse(413, server, EventHandler::getHandle());
             Logger::log(ERROR, "413 - Payload is too large: " + contentLengthHeader + " Maximum allowed: " + ParsingUtils::toString(server->getMaxClientBodySize()) + " bytes");
             return true; // Payload is too large
         }
@@ -516,7 +458,7 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
 
   if (boundary.empty()) {
     Logger::log(ERROR, "400 - No boundary found in multipart form data");
-    HTTPResponse::sendErrorResponse(400, server, client_fd); // Bad Request
+    HTTPResponse::sendErrorResponse(400, server, EventHandler::getHandle()); // Bad Request
     return;
   }
 
@@ -539,13 +481,13 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
 
   if (!ParsingUtils::doesPathExist(filePath)) {
     Logger::log(ERROR, "Directory does not exist: " + filePath);
-    HTTPResponse::sendErrorResponse(403, server, client_fd);
+    HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
     return;
   }
 
   if (!ParsingUtils::hasWritePermissions(filePath)) {
     Logger::log(ERROR, "Directory is not writable: " + filePath);
-    HTTPResponse::sendErrorResponse(403, server, client_fd);
+    HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
     return;
   }
 
@@ -556,7 +498,7 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
   std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
   if (!fileStream) {
     Logger::log(ERROR, "500 - Error opening file for writing: " + filePath);
-    HTTPResponse::sendErrorResponse(500, server, client_fd);
+    HTTPResponse::sendErrorResponse(500, server, EventHandler::getHandle());
     return;
   }
   fileStream << fileContent;
@@ -565,7 +507,7 @@ void RequestHandler::handleFileUpload(const Route& route, const Server* server) 
 	  "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Upload Success</title></head><body>"
 	  "<h1>Upload Successful</h1><p>200 OK - Your file has been uploaded successfully.</p>"
 	  "</body></html>";
-  HTTPResponse::sendSuccessResponse("200 OK", "text/html", successPageHtml, cookie, client_fd);
+  HTTPResponse::sendSuccessResponse("200 OK", "text/html", successPageHtml, cookie, EventHandler::getHandle());
   return;
 }
 
@@ -575,13 +517,13 @@ void RequestHandler::handlePostRequest(const Server* server) {
   try {
     route = server->getRoute(parser.getUri());
   } catch (const std::out_of_range& e) {
-    HTTPResponse::sendErrorResponse(404, server, client_fd);
+    HTTPResponse::sendErrorResponse(404, server, EventHandler::getHandle());
     Logger::log(ERROR, "404 - No route found for URI: " + parser.getUri());
     return;
   }
 
   if (!route.getPostMethod()) {
-    HTTPResponse::sendErrorResponse(405, server, client_fd);
+    HTTPResponse::sendErrorResponse(405, server, EventHandler::getHandle());
     Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
     return;
   }
@@ -595,7 +537,7 @@ void RequestHandler::handlePostRequest(const Server* server) {
   }
   else {
     Logger::log(INFO, "POST request on URI: " + parser.getUri());
-    HTTPResponse::sendSuccessResponse("200 OK", "text/html", " 200 OK - POST request received with body: " + parser.getBody(), cookie, client_fd);
+    HTTPResponse::sendSuccessResponse("200 OK", "text/html", " 200 OK - POST request received with body: " + parser.getBody(), cookie, EventHandler::getHandle());
   }
 }
 
@@ -642,7 +584,7 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
 			route = server->getRoute(directoryPath);
 		} catch (const std::out_of_range& e) {
 			// No route found for either the original URI or the directory path
-			HTTPResponse::sendErrorResponse(404, server, client_fd);
+			HTTPResponse::sendErrorResponse(404, server, EventHandler::getHandle());
 			Logger::log(ERROR, "404 - No route found for URI: " + originalPath);
 			return;
 		}
@@ -651,14 +593,14 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
 	std::string filePath = getFilePathFromUri(route, parser.getUri());
   Logger::log(INFO, "Looking to DELETE: " + filePath);
 	if (!route.getDeleteMethod()) {
-		HTTPResponse::sendErrorResponse(405, server, client_fd);
+		HTTPResponse::sendErrorResponse(405, server, EventHandler::getHandle());
 		Logger::log(ERROR, "405 - Method not allowed for URI: " + parser.getUri());
 		return;
 	}
 
 	if (!ParsingUtils::doesPathExist(filePath)) {
 		Logger::log(ERROR, "404 - File not found: " + filePath);
-		HTTPResponse::sendErrorResponse(404, server, client_fd);
+		HTTPResponse::sendErrorResponse(404, server, EventHandler::getHandle());
 		return;
 	}
 
@@ -667,17 +609,17 @@ void RequestHandler::handleDeleteRequest(const Server* server) {
 	//check if write and execute permissions are set in the directory in order to delete file.
 	if (!ParsingUtils::hasWriteAndExecutePermissions(dir)) {
 		Logger::log(ERROR, "403 - Insufficient permissions to delete file: " + dir);
-		HTTPResponse::sendErrorResponse(403, server, client_fd);
+		HTTPResponse::sendErrorResponse(403, server, EventHandler::getHandle());
 		return;
 	}
 
 	if (unlink(filePath.c_str()) != 0) {
 		Logger::log(ERROR, "500 - Error deleting file: " + filePath);
-		HTTPResponse::sendErrorResponse(500, server, client_fd);
+		HTTPResponse::sendErrorResponse(500, server, EventHandler::getHandle());
 		return;
 	}
 
-	HTTPResponse::sendSuccessResponse("200 OK", "text/html", "200 - OK File deleted successfully", cookie, client_fd);
+	HTTPResponse::sendSuccessResponse("200 OK", "text/html", "200 - OK File deleted successfully", cookie, EventHandler::getHandle());
 	return;
 }
 
@@ -719,15 +661,17 @@ std::string RequestHandler::extractSessionIdFromCookie(const std::string& cookie
 }
 
 bool RequestHandler::shouldCloseConnection() {
-    return reactor->isClientInactive(client_fd);
+    return reactor->isClientInactive(EventHandler::getHandle());
 }
 
 void RequestHandler::closeConnection(void) {
-	reactor->removeFromInactivityList(client_fd);
-	reactor->deregisterHandler(client_fd);
-	if (client_fd >= 0) {
-		SystemUtils::closeUtil(client_fd);
-		client_fd = -1;
-	}
-	delete this;
+  if (closeConnectionFlag)
+  {
+    reactor->removeFromInactivityList(EventHandler::getHandle());
+    reactor->deregisterHandler(EventHandler::getHandle());
+    if (EventHandler::getHandle() >= 0) {
+      SystemUtils::closeUtil(EventHandler::getHandle());
+    }
+  }
+  delete this;
 }

@@ -30,8 +30,8 @@ void Reactor::removeFromInactivityList(int fd) {
   lastActivityMap.erase(fd);
 }
 
-void Reactor::register_handler(EventHandler* eh) {
-	int fd = eh->get_handle();
+void Reactor::registerHandler(EventHandler* eh) {
+	int fd = eh->getHandle();
 
 	int flags = fcntl(fd, F_GETFL, 0);
 	if (flags == -1)
@@ -73,7 +73,7 @@ void Reactor::event_loop() {
 		}
 		for (int n = 0; n < nfds; ++n) {
 			EventHandler* eh = (EventHandler*)events[n].data.ptr;
-			eh->handle_event(events[n].events);
+			eh->handleEvent(events[n].events);
 		}
 		time_t currentTime = time(NULL);
 		if (currentTime - lastCheckTime >= 5) { // 5 seconds timeout for inactivity check 

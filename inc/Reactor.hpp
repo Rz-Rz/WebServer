@@ -13,7 +13,7 @@ class Reactor {
 	public:
 		Reactor();
 		~Reactor();
-		void register_handler(EventHandler* eh);
+		void registerHandler(EventHandler* eh);
 		void deregisterHandler(int fd);
 		void event_loop();
 		void updateLastActivity(int fd);

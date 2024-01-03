@@ -10,10 +10,10 @@
 
 class RequestHandler : public EventHandler {
   private: 
-    int client_fd;
     HTTPRequestParser parser;
     Reactor* reactor;
     Cookie cookie;
+    bool closeConnectionFlag;
 
     void handleGetRequest(const Server* server);
     void handlePostRequest(const Server* server);
@@ -24,11 +24,9 @@ class RequestHandler : public EventHandler {
     void handleFileUpload(const Route& route, const Server* server);
     void handleCGIRequest(const Route& route, const Server* server);
     void handleSession(void);
-    void setCGIEnvironment(const std::string& queryString);
 
     bool isPayloadTooLarge(const Server* server, const Route& route);
     bool shouldCloseConnection(void);
-    std::string executeCGI(const std::string& filePath);
     std::string generateDirectoryListingPage(const std::vector<std::string>& contents, const std::string& directoryPath);
     std::string extractFilename(const HTTPRequestParser& parser);
     std::string getFilename(const MultipartFormDataParser& parser);
@@ -40,17 +38,15 @@ class RequestHandler : public EventHandler {
     std::string extractSessionIdFromCookie(const std::string& cookie);
     Server* findServerForHost(const std::string& host, const std::map<std::string, Server*>* serversMap);
 
-
   public:
     RequestHandler();
     explicit RequestHandler(int fd, Reactor* reactor);
     virtual ~RequestHandler();
 
-    void handle_event(uint32_t events);
+    void handleEvent(uint32_t events);
     void handleRequest(const Server* server);
     std::string getFilePathFromUri(const Route& route, const std::string& uri);
     std::string getUploadDirectoryFromUri(const Route& route, const std::string& uri);
-    int get_handle() const;
     std::string extractDirectoryPath(const std::string& filePath);
     std::string getMimeType(const std::string& filePath);
     void closeConnection(void);

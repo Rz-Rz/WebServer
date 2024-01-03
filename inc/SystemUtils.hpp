@@ -4,7 +4,7 @@
 
 class SystemUtils {
   public: 
-    static void closeUtil(int fd);
+    static void closeUtil(int& fd);
 
   private:
     SystemUtils();

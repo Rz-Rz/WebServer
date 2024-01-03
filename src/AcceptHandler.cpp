@@ -12,13 +12,17 @@
 #include "Logger.hpp"
 #include "SystemUtils.hpp"
 
-AcceptHandler::AcceptHandler(int fd, Reactor &reactor) : listen_fd(fd), reactor(reactor) {}
+AcceptHandler::AcceptHandler(int fd, Reactor &reactor) : reactor(reactor) {
+  EventHandler::setHandle(fd);
+}
 
-void AcceptHandler::handle_event(uint32_t /*events*/) {
+AcceptHandler::~AcceptHandler() {}
+
+void AcceptHandler::handleEvent(uint32_t /*events*/) {
 	Logger::log(INFO, "Accepting a connection");
 	sockaddr_in client_addr = {};
 	socklen_t client_len = sizeof(client_addr);
-	int client_fd = accept(listen_fd, (struct sockaddr*)&client_addr, &client_len);
+	int client_fd = accept(EventHandler::getHandle(), (struct sockaddr*)&client_addr, &client_len);
 	if (client_fd == -1) {
 		Logger::log(ERROR, "Error accepting connection: " + std::string(strerror(errno)));
 	}
@@ -27,18 +31,11 @@ void AcceptHandler::handle_event(uint32_t /*events*/) {
 		Logger::log(INFO, "Registering handler for connection");
 		// Create and register a RequestHandler for this client_fd
 		EventHandler* handler = new RequestHandler(client_fd, &reactor);
-		reactor.register_handler(handler);
+		reactor.registerHandler(handler);
 	}
 }
 
-int AcceptHandler::get_handle() const {
-	return listen_fd;
-}
-
-AcceptHandler::~AcceptHandler() {
-  SystemUtils::closeUtil(listen_fd);
-}
-
 void AcceptHandler::closeConnection(void) {
-  SystemUtils::closeUtil(listen_fd);
+  if (EventHandler::getHandle() != -1)
+    SystemUtils::closeUtil(EventHandler::getHandle());
 }

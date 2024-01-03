@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
       SignalHandler::getInstance().setReactor(&reactor);
       AcceptHandler* handler = new AcceptHandler(server_fd, reactor); // Manage memory carefully
                                                                                     // SignalHandler::getInstance().registerResource(handler);
-      reactor.register_handler(handler);
+      reactor.registerHandler(handler);
     }
   }
 
